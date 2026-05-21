@@ -1468,29 +1468,25 @@ async function doLogin(){
   const b=document.getElementById('cbadge');
   b.innerHTML=`<div class="uav" style="width:22px;height:22px;font-size:9px;background:${cu.color}20;color:${cu.color};border-radius:50%;display:flex;align-items:center;justify-content:center">${cu.ini}</div> ${cu.name}`;
 
-  // Show loading state
   document.getElementById('clist').innerHTML=`<div class="empty"><div class="empty-icon">⏳</div><div class="empty-txt">Cargando casos desde la nube…</div></div>`;
 
-  // Load data from Supabase
-  cases=await loadC();
-  casesLoaded=true;
-
-  if(cases.length===0){
-    // Verificar si es error de conexión o BD vacía
-    document.getElementById('clist').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-txt">No se pudieron cargar los casos.<br><button class="btnsave" style="margin-top:12px" onclick="doLogin()">Reintentar</button></div></div>`;
+  try{
+    cases=await loadC();
+    casesLoaded=true;
+    casesIdsAlInicio=new Set(cases.map(c=>c.id));
+  }catch(e){
+    console.error('Error cargando casos:',e);
+    cases=[];casesLoaded=true;
   }
-  // Guardar IDs de todos los casos al inicio para no notificar como "nuevos"
-  casesIdsAlInicio=new Set(cases.map(c=>c.id));
-  hist=await loadH();
-  if(hist.length>0) lastHistId=hist[0].id||0;
-  compromisos=await loadCompromisosDB();
-  await loadChecklists();
+
+  try{ hist=await loadH(); if(hist.length>0) lastHistId=hist[0].id||0; }catch(e){hist=[];}
+  try{ compromisos=await loadCompromisosDB(); }catch(e){compromisos=[];}
+  try{ await loadChecklists(); }catch(e){}
 
   renderAll();
   checkAlerts();
   renderLogin();
   startRealtime();
-  // Forzar "En vivo" después de 3 segundos independientemente
   setTimeout(()=>{
     const txt=document.getElementById('sync-txt');
     if(txt) txt.textContent='En vivo';
