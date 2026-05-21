@@ -19,6 +19,9 @@
 <style>
 :root{color-scheme:dark;}
 :root{--bg:#0c0c10;--s1:#14141b;--s2:#1b1b25;--s3:#22222f;--bd:#2e2e40;--acc:#c8102e;--acc2:#ff2d4f;--gold:#f0a500;--grn:#00c97a;--blu:#3d8eff;--pur:#9b59ff;--red:#ff3355;--txt:#e6e6f0;--mut:#5e5e78;--wht:#ffffff}
+body.light{--bg:#f2f2f6;--s1:#ffffff;--s2:#e9e9f0;--s3:#dfdfe8;--bd:#c8c8d8;--txt:#18181e;--mut:#686880;color-scheme:light}
+body.light .srch::placeholder{color:var(--mut)}
+body.light input,body.light select,body.light textarea{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-height:100svh;font-size:14px;overflow-y:auto}
 .topbar{padding-left:max(24px, env(safe-area-inset-left));padding-right:max(24px, env(safe-area-inset-right))}
@@ -235,6 +238,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
 </style>
 </head>
 <body>
+<script>if(localStorage.getItem('ac_theme')==='light')document.body.classList.add('light');</script>
 
 <!-- ══ LOGIN ══ -->
 <div id="login">
@@ -284,6 +288,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         <div id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#f0a500;transition:background .5s"></div>
         <span id="sync-txt">Conectando…</span>
       </div>
+      <button class="btnout" id="theme-toggle" onclick="toggleTheme()" title="Cambiar entre modo oscuro y claro" style="font-size:14px;padding:4px 9px">🌙</button>
       <button class="btnout" onclick="logout()">Salir</button>
     </div>
   </div>
@@ -842,6 +847,10 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         </div>
       </div>
       <div class="fg" style="margin-top:12px"><label class="fl">Radicado</label><input class="fi" id="edit-rad-input" placeholder="SC-XXXXX"></div>
+      <div class="fg" style="margin-top:12px">
+        <label class="fl">Tipo de solución</label>
+        <select class="fsel" id="edit-sol"></select>
+      </div>
       <!-- Solo para finalizados -->
       <div id="edit-reactivar-box" style="display:none;margin-top:16px;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.25);border-radius:8px;padding:12px 14px">
         <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px">⚠️ Este caso está Finalizado</div>
@@ -1486,6 +1495,7 @@ async function doLogin(){
   renderAll();
   checkAlerts();
   renderLogin();
+  syncThemeBtn();
   startRealtime();
   setTimeout(()=>{
     const txt=document.getElementById('sync-txt');
@@ -2290,6 +2300,8 @@ function openEdit(id){
   document.getElementById('edit-per').value=c.periodo||'2026-1';
   document.getElementById('edit-fecha').value=c.fecha||'';
   document.getElementById('edit-rad-input').value=c.id||'';
+  const solSel=document.getElementById('edit-sol');
+  solSel.innerHTML=SOLUCIONES.map(s=>`<option value="${s}"${s===c.solucion?' selected':''}>${s}</option>`).join('');
   // Mostrar opción de reactivar si está finalizado
   document.getElementById('edit-reactivar-box').style.display=
     c.subestado==='Finalizado'?'block':'none';
@@ -2304,6 +2316,7 @@ async function saveEdit(){
   c.estudiante=document.getElementById('edit-est').value.trim().toUpperCase();
   c.periodo=document.getElementById('edit-per').value;
   c.fecha=document.getElementById('edit-fecha').value;
+  c.solucion=document.getElementById('edit-sol').value||c.solucion;
   // Si cambió el radicado
   if(nuevoRad&&nuevoRad!==editId){
     // Cambiar ID: eliminar viejo, insertar nuevo
@@ -3547,10 +3560,14 @@ function renderAnalitica(){
     <div class="an-kpi pur"><div class="an-klabel">Estudiantes</div><div class="an-kval" style="color:var(--pur)">${new Set(allCases.map(c=>c.estudiante)).size}</div><div class="an-ksub">Únicos en período</div></div>
   `;
 
+  const _isLight=document.body.classList.contains('light');
+  const _tc=_isLight?'#18181e':'#e6e6f0';
+  const _mc=_isLight?'#60607a':'#5e5e78';
+  const _gc=_isLight?'#d0d0df':'#2e2e40';
   const CHART_DEFAULTS={
-    color:'#e6e6f0',
-    plugins:{legend:{labels:{color:'#e6e6f0',font:{family:"'DM Sans',sans-serif",size:11}}}},
-    scales:{x:{ticks:{color:'#5e5e78',font:{size:10}},grid:{color:'#2e2e40'}},y:{ticks:{color:'#5e5e78',font:{size:10}},grid:{color:'#2e2e40'}}},
+    color:_tc,
+    plugins:{legend:{labels:{color:_tc,font:{family:"'DM Sans',sans-serif",size:11}}}},
+    scales:{x:{ticks:{color:_mc,font:{size:10}},grid:{color:_gc}},y:{ticks:{color:_mc,font:{size:10}},grid:{color:_gc}}},
   };
   const COLORS=['#c8102e','#3d8eff','#9b59ff','#00c97a','#f0a500','#ff3355','#00b8d4','#e91e8c','#8bc34a','#ff9800'];
 
@@ -3571,7 +3588,7 @@ function renderAnalitica(){
   const pctFin=fin.length+act.length>0?Math.round(fin.length/(fin.length+act.length)*100):0;
   charts['ch-donut']=new Chart(document.getElementById('ch-donut'),{
     type:'doughnut',
-    data:{labels:['Finalizados','En curso'],datasets:[{data:[fin.length,act.length],backgroundColor:['#00c97a','#3d8eff'],borderColor:'#14141b',borderWidth:3,hoverOffset:6}]},
+    data:{labels:['Finalizados','En curso'],datasets:[{data:[fin.length,act.length],backgroundColor:['#00c97a','#3d8eff'],borderColor:_isLight?'#f2f2f6':'#14141b',borderWidth:3,hoverOffset:6}]},
     options:{
       plugins:{
         legend:{position:'bottom',labels:{color:'#e6e6f0',font:{family:"'DM Sans',sans-serif",size:11},padding:14}},
@@ -3613,7 +3630,7 @@ function renderAnalitica(){
       {label:'Finalizados',data:lkeys.map(k=>liderFin[k]),backgroundColor:'#00c97a',borderRadius:5,stack:'s'},
       {label:'Activos',data:lkeys.map(k=>liderAct[k]),backgroundColor:'#3d8eff',borderRadius:5,stack:'s'},
     ]},
-    options:{...CHART_DEFAULTS,plugins:{legend:{labels:{color:'#e6e6f0',font:{size:11}}}}}
+    options:{...CHART_DEFAULTS,plugins:{legend:{labels:{color:_tc,font:{size:11}}}}}
   });
 
   // Chart 4: Evolución mensual
@@ -3643,7 +3660,7 @@ function renderAnalitica(){
   charts['ch-tiempo']=new Chart(document.getElementById('ch-tiempo'),{
     type:'bar',
     data:{labels:tipoAvg.map(t=>t.k),datasets:[{label:'Días promedio',data:tipoAvg.map(t=>t.avg),backgroundColor:tipoAvg.map((_,i)=>COLORS[i%COLORS.length]),borderRadius:5,borderSkipped:false}]},
-    options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CHART_DEFAULTS.scales?.x},y:{...CHART_DEFAULTS.scales?.y,ticks:{color:'#9b9bb8',font:{size:10}}}}}
+    options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CHART_DEFAULTS.scales?.x},y:{...CHART_DEFAULTS.scales?.y,ticks:{color:_mc,font:{size:10}}}}}
   });
 
   // Fill líder filter
@@ -3932,6 +3949,20 @@ function renderConsultorio(){
 function abrirGeneradorSA(){
   showToast('🏛️ Abriendo generador de Solicitud de Audiencia…');
   window.open('https://claude.ai','_blank');
+}
+
+// ══════════════════════════════════════════
+//  TEMA CLARO / OSCURO
+// ══════════════════════════════════════════
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light');
+  localStorage.setItem('ac_theme',isLight?'light':'dark');
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent=isLight?'☀️':'🌙';
+}
+function syncThemeBtn(){
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent=document.body.classList.contains('light')?'☀️':'🌙';
 }
 
 // ── INIT ──
