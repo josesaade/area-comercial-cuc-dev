@@ -1494,6 +1494,8 @@ async function doLogin(){
     if(dot) dot.style.background='var(--grn)';
   },3000);
   sw('casos');
+  // Forzar render de casos después de que el DOM esté listo
+  setTimeout(()=>render(),100);
 }
 
 function logout(){
@@ -3533,7 +3535,7 @@ function renderAnalitica(){
     `${fin.length} finalizados · ${act.length} activos`;
 
   // Duración promedio
-  const durs=fin.filter(f=>f.fechaFin).map(f=>Math.max(0,Math.floor((new Date(f.fechaFin)-new Date(f.fecha))/86400000)));
+  const durs=fin.filter(f=>f.fechaFin||f.fechaUltimaAccion).map(f=>{const ff=f.fechaFin||f.fechaUltimaAccion;return Math.max(0,Math.floor((new Date(ff)-new Date(f.fecha))/86400000));});
   const avgDur=durs.length?Math.round(durs.reduce((a,b)=>a+b,0)/durs.length):0;
 
   // KPIs
@@ -3616,8 +3618,8 @@ function renderAnalitica(){
 
   // Chart 4: Evolución mensual
   const mesCount={};
-  fin.filter(f=>f.fechaFin).forEach(f=>{
-    const m=f.fechaFin.substring(0,7);
+  fin.filter(f=>f.fechaFin||f.fechaUltimaAccion).forEach(f=>{
+    const ff=f.fechaFin||f.fechaUltimaAccion;const m=ff.substring(0,7);
     mesCount[m]=(mesCount[m]||0)+1;
   });
   const meses=Object.keys(mesCount).sort();
@@ -3631,9 +3633,9 @@ function renderAnalitica(){
 
   // Chart 5: Tiempo promedio por tipo
   const tipoDur={};
-  fin.filter(f=>f.fechaFin).forEach(f=>{
+  fin.filter(f=>f.fechaFin||f.fechaUltimaAccion).forEach(f=>{
     const k=(f.solucion||'Otro').replace('Solicitud de conciliación','SA').replace('Demanda (restitución de inmueble arrendado)','D.Rest.').replace('Demanda (ejecutiva)','D.Ejec.').replace('Demanda (accion de proteccion al consumidor)','D.APC').replace('Contestación de demanda','Contestación').replace('Reclamación directa','Reclamación').replace('Requerimiento de restitución de inmueble','Req.Rest.').replace('Contrato de arrendamiento','Contrato');
-    const d=Math.max(0,Math.floor((new Date(f.fechaFin)-new Date(f.fecha))/86400000));
+    const d=Math.max(0,Math.floor((new Date(f.fechaFin||f.fechaUltimaAccion)-new Date(f.fecha))/86400000));
     if(!tipoDur[k])tipoDur[k]=[];tipoDur[k].push(d);
   });
   const tipoAvg=Object.entries(tipoDur).map(([k,v])=>({k,avg:Math.round(v.reduce((a,b)=>a+b,0)/v.length)})).sort((a,b)=>b.avg-a.avg);
@@ -3662,13 +3664,13 @@ function renderFinTable(finList){
   const fin=finList||(anPeriodo==='todos'?cases.filter(c=>c.subestado==='Finalizado'):cases.filter(c=>c.subestado==='Finalizado'&&c.periodo===anPeriodo));
   const q=(document.getElementById('fin-srch')?.value||'').toLowerCase();
   const lf=document.getElementById('fin-lider')?.value||'';
-  let list=[...fin].sort((a,b)=>new Date(b.fechaFin||b.fecha)-new Date(a.fechaFin||a.fecha));
+  let list=[...fin].sort((a,b)=>new Date(b.fechaFin||b.fechaUltimaAccion||b.fecha)-new Date(a.fechaFin||a.fechaUltimaAccion||a.fecha));
   if(q)list=list.filter(f=>f.id.toLowerCase().includes(q)||f.estudiante.toLowerCase().includes(q)||f.solucion.toLowerCase().includes(q));
   if(lf)list=list.filter(f=>f.lider===lf);
   const el=document.getElementById('fin-list');
   if(!list.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📂</div><div class="empty-txt">Sin resultados</div></div>`;return;}
   el.innerHTML=list.map(f=>{
-    const dur=f.fechaFin?Math.max(0,Math.floor((new Date(f.fechaFin)-new Date(f.fecha))/86400000))+'d':'—';
+    const dur=(f.fechaFin||f.fechaUltimaAccion)?Math.max(0,Math.floor((new Date(f.fechaFin||f.fechaUltimaAccion)-new Date(f.fecha))/86400000))+'d':'—';
     const u=gu(f.lider);
     const durNum=parseInt(dur)||0;
     return `<div class="tr2" style="grid-template-columns:110px 200px 130px 120px 90px 90px 80px;cursor:default">
@@ -3691,7 +3693,7 @@ function exportPDF(){
   const act=cases.filter(c=>c.subestado!=='Finalizado');
   const total=fin.length+act.length;
   const pct=Math.round(fin.length/total*100);
-  const durs=fin.filter(f=>f.fechaFin).map(f=>Math.max(0,Math.floor((new Date(f.fechaFin)-new Date(f.fecha))/86400000)));
+  const durs=fin.filter(f=>f.fechaFin||f.fechaUltimaAccion).map(f=>{const ff=f.fechaFin||f.fechaUltimaAccion;return Math.max(0,Math.floor((new Date(ff)-new Date(f.fecha))/86400000));});
   const avgDur=durs.length?Math.round(durs.reduce((a,b)=>a+b,0)/durs.length):0;
   const tipoCount={};
   [...fin,...act].forEach(c=>{const k=c.solucion||'Otro';tipoCount[k]=(tipoCount[k]||0)+1;});
@@ -3703,7 +3705,7 @@ function exportPDF(){
     return `<tr><td>${u.name}</td><td style="text-align:center">${lf+la}</td><td style="text-align:center;color:#00c97a;font-weight:600">${lf}</td><td style="text-align:center;color:#3d8eff">${la}</td></tr>`;
   }).join('');
   const finRows=fin.slice(0,50).map(f=>{
-    const dur=f.fechaFin?Math.max(0,Math.floor((new Date(f.fechaFin)-new Date(f.fecha))/86400000))+'d':'—';
+    const dur=(f.fechaFin||f.fechaUltimaAccion)?Math.max(0,Math.floor((new Date(f.fechaFin||f.fechaUltimaAccion)-new Date(f.fecha))/86400000))+'d':'—';
     return `<tr><td>${f.id}</td><td>${f.usuario}</td><td>${f.solucion}</td><td>${gu(f.lider).name.split(' ')[0]}</td><td>${f.fecha}</td><td style="font-weight:600">${dur}</td></tr>`;
   }).join('');
 
