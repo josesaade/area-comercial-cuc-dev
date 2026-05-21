@@ -1954,7 +1954,7 @@ async function crearChecklistSiNecesario(caseId){
 
 function openChecklistModal(caseId){
   ckEditId=caseId;
-  const c=cases.find(x=>x.id===caseId)||FINALIZADOS.find(x=>x.id===caseId);
+  const c=cases.find(x=>x.id===caseId);
   const ck=checklists[caseId]||{};
   document.getElementById('ck-modal-title').textContent=c?.estudiante||caseId;
   document.getElementById('ck-modal-rad').textContent=caseId+' · '+(c?.solucion||'');
@@ -1987,7 +1987,7 @@ function renderChecklist(){
   const liderFilt=lf.value;
   const filtro=document.getElementById('ck-filter').value;
   const q=(document.getElementById('ck-srch').value||'').toLowerCase();
-  const finCases=[...FINALIZADOS,...cases.filter(c=>c.subestado==='Finalizado')];
+  const finCases=cases.filter(c=>c.subestado==='Finalizado');
   let list=finCases.filter(c=>!liderFilt||c.lider===liderFilt);
   if(q) list=list.filter(c=>c.id.toLowerCase().includes(q)||c.estudiante.toLowerCase().includes(q));
   if(filtro==='incompletos') list=list.filter(c=>ckCompletoPct(checklists[c.id])<100);
@@ -2103,8 +2103,7 @@ function procesarExcelEmma(file){
 
       // 2. Clasificar en 3 grupos
       const FINALIZADOS_CLAUDIA=new Set([
-        ...cases.filter(c=>c.subestado==='Finalizado').map(c=>c.id),
-        ...FINALIZADOS.map(f=>f.id)
+        ...cases.filter(c=>c.subestado==='Finalizado').map(c=>c.id)
       ]);
       const ACTIVOS_CLAUDIA=new Set(cases.filter(c=>c.subestado!=='Finalizado').map(c=>c.id));
       const TODOS_CLAUDIA=new Set([...FINALIZADOS_CLAUDIA,...ACTIVOS_CLAUDIA]);
@@ -2437,7 +2436,7 @@ function buscarGlobal(q){
   if(!q||q.length<3) return;
   const ql=q.toLowerCase();
   const enActivos=cases.filter(c=>c.id.toLowerCase().includes(ql)||c.estudiante.toLowerCase().includes(ql)||(c.usuario||'').toLowerCase().includes(ql));
-  const enFin=FINALIZADOS.filter(f=>f.id.toLowerCase().includes(ql)||f.estudiante.toLowerCase().includes(ql));
+  const enFin=cases.filter(c=>c.subestado==='Finalizado'&&(c.id.toLowerCase().includes(ql)||c.estudiante.toLowerCase().includes(ql)));
   const enHist=hist.filter(h=>h.caseId.toLowerCase().includes(ql)||h.estudiante.toLowerCase().includes(ql));
   return{activos:enActivos,finalizados:enFin,historial:enHist};
 }
@@ -2555,7 +2554,7 @@ function openAddCompromiso(){
 
 function autoFillComp(){
   const rad=document.getElementById('c-rad').value.trim().toUpperCase();
-  const found=cases.find(c=>c.id===rad)||FINALIZADOS.find(c=>c.id===rad);
+  const found=cases.find(c=>c.id===rad);
   if(found) document.getElementById('c-est').value=found.estudiante;
 }
 
@@ -3498,148 +3497,8 @@ function renderAll(){renderStats();render();}
 // ══════════════════════════════════════════
 //  FINALIZADOS DATA (histórico del Excel)
 // ══════════════════════════════════════════
-const FINALIZADOS=[
-  {id:'SC-13072',usuario:'ALBERTO VAZQUEZ ROA',estudiante:'FERNANDO NASSAR PENARANDA',solucion:'Concepto',lider:'azhly',fecha:'2026-02-03',fechaFin:'2026-02-10'},
-  {id:'SC-13073',usuario:'ESMERYS DEL VALLE SOTO',estudiante:'FERNANDO NASSAR PENARANDA',solucion:'Concepto',lider:'azhly',fecha:'2026-02-03',fechaFin:'2026-02-10'},
-  {id:'SC-13074',usuario:'CRISTOBAL CASTRO ROJAS',estudiante:'MARIA DIAZ PADILLA',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-02-03',fechaFin:'2026-03-16'},
-  {id:'SC-13076',usuario:'JORGE POSADA REYES',estudiante:'MARIA DIAZ PADILLA',solucion:'Requerimiento de restitución de inmueble',lider:'gabriela',fecha:'2026-02-03',fechaFin:'2026-02-12'},
-  {id:'SC-13080',usuario:'BRENDA CASTRO UBARNES',estudiante:'DAVID AGUIRRE PEREZ',solucion:'Derecho de petición',lider:'victor',fecha:'2026-02-04',fechaFin:'2026-02-18'},
-  {id:'SC-13082',usuario:'EDUARDO GARIZABALO ALMARES',estudiante:'MAYRA IBAÑEZ ECHEVERRY',solucion:'Reclamación directa',lider:'azhly',fecha:'2026-02-04',fechaFin:'2026-02-10'},
-  {id:'SC-13084',usuario:'ADALUZ AYALA DE LA PEÑA',estudiante:'MELANY RAMIREZ MONTERO',solucion:'Desestimiento',lider:'angie',fecha:'2026-02-04',fechaFin:'2026-03-02'},
-  {id:'SC-13094',usuario:'ALEJANDRO GONZALEZ DEL VILLAR',estudiante:'MARIANA NIEBLES GARCIA',solucion:'Concepto',lider:'azhly',fecha:'2026-02-05',fechaFin:'2026-02-19'},
-  {id:'SC-13097',usuario:'ROCIO MERLANO LAPEIRA',estudiante:'GABRIEL MERCADO INSIGNARES',solucion:'Concepto',lider:'azhly',fecha:'2026-02-05',fechaFin:'2026-03-17'},
-  {id:'SC-13099',usuario:'UTRIA JONATHAN ORLANDO',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Derecho de petición',lider:'angie',fecha:'2026-02-06',fechaFin:'2026-02-20'},
-  {id:'SC-13100',usuario:'JAIME ALVARADO KORTRIGHT',estudiante:'VICTOR POLANCO CERPA',solucion:'Concepto',lider:'azhly',fecha:'2026-02-06',fechaFin:'2026-01-13'},
-  {id:'SC-13102',usuario:'STEVEN BARRIOS AMARIS',estudiante:'LAURA HORTA BELTRAN',solucion:'Concepto',lider:'victor',fecha:'2026-02-06',fechaFin:'2026-02-23'},
-  {id:'SC-13104',usuario:'ROBERT NAVARRO GONZÁLEZ',estudiante:'DIEGO MUÑETON GARCIA',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-02-23',fechaFin:'2026-03-16'},
-  {id:'SC-13105',usuario:'MELISSA CARO SOTO',estudiante:'ANA LIVINGSTON MITCHELL',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-02-06',fechaFin:'2026-03-16'},
-  {id:'SC-13122',usuario:'ADRIAN RUA GARCIA',estudiante:'LUISA GUTIERREZ',solucion:'Desestimiento',lider:'azhly',fecha:'2026-02-10',fechaFin:'2026-03-10'},
-  {id:'SC-13124',usuario:'KELIBETH NAVARRO TAPIAS',estudiante:'LUIS DE LA OSSA RADA',solucion:'Concepto',lider:'victor',fecha:'2026-02-10',fechaFin:'2026-02-24'},
-  {id:'SC-13126',usuario:'ADOLFO CASTELLANO BADILLO',estudiante:'SARAY AYALA CASTRO',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-02-11',fechaFin:'2026-03-17'},
-  {id:'SC-13135',usuario:'EDWIN GONZALEZ QUIROZ',estudiante:'DANNA MATTA SUAREZ',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-11',fechaFin:'2026-02-19'},
-  {id:'SC-13136',usuario:'EDITH SALCEDO PINEDA',estudiante:'KAROL PERTUZ HERNANDEZ',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-02-11',fechaFin:'2026-02-25'},
-  {id:'SC-13138',usuario:'HENRY MORALES CERVANTES',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Concepto',lider:'victor',fecha:'2026-02-11',fechaFin:'2026-02-20'},
-  {id:'SC-13149',usuario:'YOLEIMA MENDOZA OTERO',estudiante:'SARAY AYALA CASTRO',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-26',fechaFin:'2026-03-17'},
-  {id:'SC-13152',usuario:'LILIA CALVO ALDANA',estudiante:'GABRIEL MERCADO INSIGNARES',solucion:'Demanda (ejecutiva)',lider:'angie',fecha:'2026-02-12',fechaFin:'2026-03-16'},
-  {id:'SC-13153',usuario:'YAMID CORTES CRUZ',estudiante:'MAYRA IBAÑEZ ECHEVERRY',solucion:'Concepto',lider:'azhly',fecha:'2026-02-12',fechaFin:'2026-02-19'},
-  {id:'SC-13154',usuario:'YOLIMA MONTES BARCASNEGRAS',estudiante:'LUISA PEÑA MARTINEZ',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-12',fechaFin:'2026-03-17'},
-  {id:'SC-13158',usuario:'DORIS DURAN DURAN',estudiante:'NEIL DIAZ EPIAYU',solucion:'Derecho de petición',lider:'victor',fecha:'2026-02-19',fechaFin:'2026-03-03'},
-  {id:'SC-13160',usuario:'LAURA NAVARRO MERCADO',estudiante:'SAMUEL PEÑA OJEDA',solucion:'Tutela',lider:'gabriela',fecha:'2026-02-12',fechaFin:'2026-03-16'},
-  {id:'SC-13162',usuario:'CARLOS PADILLA RODRÍGUEZ',estudiante:'OSCAR ROSALES LOPEZ',solucion:'Concepto',lider:'azhly',fecha:'2026-02-20',fechaFin:'2026-03-05'},
-  {id:'SC-13164',usuario:'PEDRO GRANADOS GUZMAN',estudiante:'MARIA RADA PABON',solucion:'Concepto',lider:'victor',fecha:'2026-02-13',fechaFin:'2026-03-05'},
-  {id:'SC-13183',usuario:'ILUMINADA RODRIGUEZ VECCHIO',estudiante:'MARIA RINCON JARAMILLO',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-02-18',fechaFin:'2026-03-01'},
-  {id:'SC-13189',usuario:'MARIA FLOREZ SIERRA',estudiante:'ANGI CRESPO FANDINO',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-02-19',fechaFin:'2026-03-16'},
-  {id:'SC-13191',usuario:'SERGIO VALENCIA FERRER',estudiante:'SARAY AYALA CASTRO',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-19',fechaFin:'2026-03-03'},
-  {id:'SC-13197',usuario:'NORA SOLANO PRIETO',estudiante:'ELIAS PAEZ BARROS',solucion:'Desestimiento',lider:'azhly',fecha:'2026-02-19',fechaFin:'2026-03-09'},
-  {id:'SC-13216',usuario:'ANTONIO MEZA CARRILLO',estudiante:'NEIL DIAZ EPIAYU',solucion:'Concepto',lider:'azhly',fecha:'2026-02-20',fechaFin:'2026-03-12'},
-  {id:'SC-13241',usuario:'JENIFFER FUENTES PACHON',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Concepto',lider:'victor',fecha:'2026-02-23',fechaFin:'2026-02-27'},
-  {id:'SC-13244',usuario:'KEVIN CALDERIN VARGAS',estudiante:'ROSIMAR BARRIOS PEREZ',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-02-24',fechaFin:'2026-03-04'},
-  {id:'SC-13250',usuario:'LIDUVINA PEREZ DE ROMERO',estudiante:'MARIANA NIEBLES GARCIA',solucion:'Solicitud de conciliación',lider:'azhly',fecha:'2026-02-24',fechaFin:''},
-  {id:'SC-13252',usuario:'DIDIER PAVAJEAU CONTRERAS',estudiante:'DANIEL HERNANDEZ SANTIAGO',solucion:'Concepto',lider:'victor',fecha:'2026-02-24',fechaFin:'2026-03-02'},
-  {id:'SC-13256',usuario:'JORGE POSADA REYES',estudiante:'LUIS DE LA OSSA RADA',solucion:'Concepto',lider:'victor',fecha:'2026-02-27',fechaFin:'2026-03-04'},
-  {id:'SC-13259',usuario:'IVAN GOMEZ VILLAR',estudiante:'OSNAIDER DE LA HOZ VILLADIEGO',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-25',fechaFin:'2026-03-04'},
-  {id:'SC-13262',usuario:'FRANCELINA LOZANO RODRIGUEZ',estudiante:'CARLOS REYES ARAUJO',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-25',fechaFin:'2026-03-03'},
-  {id:'SC-13265',usuario:'JENIFER MERCADO VALENCIA',estudiante:'HUMBERTO PAEZ FERNANDEZ DE CASTRO',solucion:'Desestimiento',lider:'angie',fecha:'2026-02-25',fechaFin:'2026-03-24'},
-  {id:'SC-13266',usuario:'ANA VIZCAINO MONSALVO',estudiante:'OSNAIDER DE LA HOZ VILLADIEGO',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-25',fechaFin:'2026-03-17'},
-  {id:'SC-13267',usuario:'YOMAIRA WESTER GUERRERO',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Concepto',lider:'victor',fecha:'2026-02-25',fechaFin:'2026-03-05'},
-  {id:'SC-13268',usuario:'ORLANDO GIRALDO MARIN',estudiante:'LUISA PEÑA MARTINEZ',solucion:'Concepto',lider:'azhly',fecha:'2026-02-25',fechaFin:'2026-03-12'},
-  {id:'SC-13273',usuario:'LUIS GARZON YIDIS',estudiante:'OSWALDO CENTENO CADENA',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-02-26',fechaFin:'2026-03-31'},
-  {id:'SC-13281',usuario:'ULPIANO NAVARRO GARCIA',estudiante:'MARIA DIAZ',solucion:'Solicitud de conciliación',lider:'victor',fecha:'2026-02-26',fechaFin:'2026-03-25'},
-  {id:'SC-13284',usuario:'GISSELL CERPA QUINTO',estudiante:'FERNANDO NASSAR',solucion:'Reclamación directa',lider:'victor',fecha:'2026-02-26',fechaFin:'2026-03-11'},
-  {id:'SC-13285',usuario:'HAIDER CALVO CERVANTES',estudiante:'ELIAS PAEZ',solucion:'Concepto',lider:'gabriela',fecha:'2026-02-26',fechaFin:'2026-03-24'},
-  {id:'SC-13316',usuario:'ANIBAL ZARATE MARQUEZ',estudiante:'YERLIN PEÑA DE LA HOZ',solucion:'Derecho de petición',lider:'victor',fecha:'2026-03-02',fechaFin:'2026-03-17'},
-  {id:'SC-13329',usuario:'ALFONSO SUÁREZ POLO',estudiante:'JORGE MEDERO COTES',solucion:'Derecho de petición',lider:'victor',fecha:'2026-03-03',fechaFin:'2026-03-11'},
-  {id:'SC-13335',usuario:'DENICES MENDOZA ZAMBRANO',estudiante:'MATEUS OSORIO GUTIERREZ',solucion:'Concepto',lider:'victor',fecha:'2026-03-03',fechaFin:'2026-03-17'},
-  {id:'SC-13336',usuario:'JULIAN MOSQUERA ALBA',estudiante:'ALI PARRA CASTAÑEDA',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-03-12',fechaFin:'2026-05-03'},
-  {id:'SC-13337',usuario:'INILIDA DÍAS ROJAS',estudiante:'RUBEN CANAS PENA',solucion:'Concepto',lider:'azhly',fecha:'2026-03-03',fechaFin:'2026-03-03'},
-  {id:'SC-13346',usuario:'MEICY GARCÍA DE LA ESPRIELLA',estudiante:'DANNA MATTA SUAREZ',solucion:'Concepto',lider:'azhly',fecha:'2026-03-04',fechaFin:'2026-03-19'},
-  {id:'SC-13348',usuario:'ANGELICA BARROS OLIVARES',estudiante:'CARLOS REYES ARAUJO',solucion:'Concepto',lider:'gabriela',fecha:'2026-03-04',fechaFin:'2026-03-20'},
-  {id:'SC-13353',usuario:'MANUEL MENDOZA ARENAS',estudiante:'HUMBERTO PAEZ FERNANDEZ DE CASTRO',solucion:'Concepto',lider:'victor',fecha:'2026-03-04',fechaFin:'2026-03-12'},
-  {id:'SC-13356',usuario:'JAVIER OJEDA NARANJO',estudiante:'MARIA CALDERON PEREZ',solucion:'Tutela',lider:'gabriela',fecha:'2026-03-04',fechaFin:'2026-03-20'},
-  {id:'SC-13357',usuario:'LEIDA LAMBRAÑO ARIZA',estudiante:'ALI PARRA CASTAÑEDA',solucion:'Concepto',lider:'victor',fecha:'2026-03-12',fechaFin:'2026-04-16'},
-  {id:'SC-13389',usuario:'ANDRES MOLINA GUERRERO',estudiante:'WALTER MARTINEZ CUSSA',solucion:'Concepto',lider:'victor',fecha:'2026-03-10',fechaFin:'2026-03-27'},
-  {id:'SC-13392',usuario:'KISS ROJAS ARROYO',estudiante:'DAVID AGUIRRE PEREZ',solucion:'Concepto',lider:'gabriela',fecha:'2026-03-06',fechaFin:'2026-03-20'},
-  {id:'SC-13393',usuario:'XIOMARA ILLUECA GUTIERREZ',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-03-06',fechaFin:'2026-04-11'},
-  {id:'SC-13395',usuario:'KATHERINE GOMEZ PLATA',estudiante:'WALTER MARTINEZ CUSSA',solucion:'Concepto',lider:'angie',fecha:'2026-03-06',fechaFin:'2026-03-16'},
-  {id:'SC-13403',usuario:'JAIME MONTAÑO FREAY',estudiante:'TEYJANA MAESTRE',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-03-09',fechaFin:'2026-03-17'},
-  {id:'SC-13406',usuario:'IVAN CARREÑO COLINA',estudiante:'RICARDO LOZANO MARRERO',solucion:'Concepto',lider:'victor',fecha:'2026-03-09',fechaFin:'2026-03-10'},
-  {id:'SC-13409',usuario:'HAROLD HERRERA SALAZAR',estudiante:'MARIA RINCON JARAMILLO',solucion:'Desestimiento',lider:'angie',fecha:'2026-03-09',fechaFin:'2026-04-15'},
-  {id:'SC-13410',usuario:'HAROLD HERRERA SALAZAR',estudiante:'MARIA TERESA DIAZ',solucion:'Solicitud de conciliación',lider:'angie',fecha:'2026-03-09',fechaFin:'2026-05-05'},
-  {id:'SC-13414',usuario:'ORFILIA CARVAJAL VASQUEZ',estudiante:'YERLIN PEÑA DE LA HOZ',solucion:'Concepto',lider:'angie',fecha:'2026-03-09',fechaFin:''},
-  {id:'SC-13432',usuario:'LISSETH JACOME CABARCAS',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Concepto',lider:'azhly',fecha:'2026-03-12',fechaFin:'2026-04-15'},
-  {id:'SC-13439',usuario:'XIOMARA RODRIGUEZ SANCHEZ',estudiante:'FERNANDO NASSAR PENARANDA',solucion:'Concepto',lider:'azhly',fecha:'2026-03-11',fechaFin:'2026-03-26'},
-  {id:'SC-13443',usuario:'SHARIT MALDONADO MORRON',estudiante:'ANGIE MEJIA SALAZAR',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-11',fechaFin:'2026-03-16'},
-  {id:'SC-13444',usuario:'SANDRA COMAS PARGA',estudiante:'ANGELL RUA ARENAS',solucion:'Concepto',lider:'azhly',fecha:'2026-03-11',fechaFin:'2026-03-24'},
-  {id:'SC-13453',usuario:'FERNANDO RODRIGUEZ PEREZ',estudiante:'JEIMY BUITRAGO',solucion:'Concepto',lider:'gabriela',fecha:'2026-03-12',fechaFin:'2026-04-08'},
-  {id:'SC-13456',usuario:'SILVANA MUÑOZ URUETA',estudiante:'KAROL PERTUZ',solucion:'Concepto',lider:'angie',fecha:'2026-03-12',fechaFin:'2026-03-20'},
-  {id:'SC-13468',usuario:'YESENIA MENDOZA LEAL',estudiante:'WILSON RACEDO CAICEDO',solucion:'Derecho de petición',lider:'victor',fecha:'2026-03-13',fechaFin:'2026-03-18'},
-  {id:'SC-13490',usuario:'DINA DELGADO JIMENEZ',estudiante:'FERNANDO NASSAR',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-16',fechaFin:'2026-04-21'},
-  {id:'SC-13491',usuario:'LAURA REALES RODRIGUEZ',estudiante:'RICARDO LOZANO MARRERO',solucion:'Concepto',lider:'azhly',fecha:'2026-03-16',fechaFin:'2026-03-26'},
-  {id:'SC-13493',usuario:'ARAIZA FRIAS SIERRA',estudiante:'YARLIS CABARCAS CALLEJA',solucion:'Concepto',lider:'gabriela',fecha:'2026-03-16',fechaFin:'2026-04-06'},
-  {id:'SC-13498',usuario:'KAREN LARA CANTILLO',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-03-16',fechaFin:'2026-03-26'},
-  {id:'SC-13510',usuario:'STEFFANY SANCHEZ GARCIA',estudiante:'JORGE MEDERO COTES',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-17',fechaFin:'2026-03-24'},
-  {id:'SC-13513',usuario:'JENNIFER PEREZ SENIOR',estudiante:'JORGE MEDERO COTES',solucion:'Concepto',lider:'azhly',fecha:'2026-03-17',fechaFin:'2026-03-30'},
-  {id:'SC-13514',usuario:'INGRID ACEVEDO CORONADO',estudiante:'MATEUS OSORIO GUTIERREZ',solucion:'Concepto',lider:'victor',fecha:'2026-03-17',fechaFin:'2026-04-01'},
-  {id:'SC-13522',usuario:'AMREL MARTINEZ SALAZAR',estudiante:'DAVID AGUIRRE PEREZ',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-18',fechaFin:'2026-03-24'},
-  {id:'SC-13526',usuario:'JORGE SILVA PEDRAZA',estudiante:'FERNANDO NASSAR PENARANDA',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-18',fechaFin:'2026-04-07'},
-  {id:'SC-13532',usuario:'MIGUEL MALDONADO',estudiante:'ANDREA LASTRA DOMINGUEZ',solucion:'Reclamación directa',lider:'victor',fecha:'2026-03-18',fechaFin:'2026-03-27'},
-  {id:'SC-13533',usuario:'YENNIFER LLANO ORTIZ',estudiante:'LUISA PEÑA MARTINEZ',solucion:'Tutela',lider:'gabriela',fecha:'2026-03-18',fechaFin:'2026-05-03'},
-  {id:'SC-13552',usuario:'RAMIRO CARDERO OSPINA',estudiante:'ELIAS PAEZ BARROS',solucion:'Reclamación directa',lider:'azhly',fecha:'2026-03-19',fechaFin:'2026-04-22'},
-  {id:'SC-13553',usuario:'WILLIAN GUZMAN GARCIA',estudiante:'KATHERIN ORTEGA GALVIS',solucion:'Concepto',lider:'azhly',fecha:'2026-03-19',fechaFin:'2026-04-08'},
-  {id:'SC-13565',usuario:'ADALBERTO LAZZO REDONDO',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Contrato de arrendamiento',lider:'gabriela',fecha:'2026-03-20',fechaFin:'2026-05-04'},
-  {id:'SC-13566',usuario:'AYDA DE LIMA VIDES',estudiante:'WILSON RACEDO CAICEDO',solucion:'Concepto',lider:'victor',fecha:'2026-03-20',fechaFin:'2026-03-26'},
-  {id:'SC-13597',usuario:'DAIRO PEÑARANDA VALENCIA',estudiante:'JORGE MEDERO COTES',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-24',fechaFin:'2026-04-08'},
-  {id:'SC-13598',usuario:'DALILA AMARANTO ARIZA',estudiante:'MARIA RADA PABON',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-03-24',fechaFin:'2026-05-28'},
-  {id:'SC-13601',usuario:'NERIS ROZO ALARCON',estudiante:'LUIS DE LA OSSA RADA',solucion:'Derecho de petición',lider:'angie',fecha:'2026-03-24',fechaFin:'2026-04-20'},
-  {id:'SC-13612',usuario:'FRANCELINA MARTINEZ ARAQUE',estudiante:'DANIEL HERNANDEZ SANTIAGO',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-03-24',fechaFin:'2026-04-29'},
-  {id:'SC-13616',usuario:'EDITH MEJIA DE LA HOZ',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Desestimiento',lider:'gabriela',fecha:'2026-03-24',fechaFin:'2026-05-04'},
-  {id:'SC-13625',usuario:'SARA OLIVEROS ZAMBRANO',estudiante:'ANGELL RUA ARENAS',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-25',fechaFin:'2026-04-12'},
-  {id:'SC-13638',usuario:'ELISA GONZALEZ TORRE NEGRA',estudiante:'ORLANDO MANOTAS',solucion:'Concepto',lider:'victor',fecha:'2026-03-25',fechaFin:'2026-04-17'},
-  {id:'SC-13651',usuario:'RICARDO NAVARRO LECHUGA',estudiante:'WALTER MARTINEZ CUSSA',solucion:'Concepto',lider:'victor',fecha:'2026-03-26',fechaFin:'2026-04-21'},
-  {id:'SC-13061',usuario:'SANDRA ROMERO LICERO',estudiante:'DANIELA MORON',solucion:'Concepto',lider:'victor',fecha:'2026-04-07',fechaFin:'2026-04-21'},
-  {id:'SC-13663',usuario:'RUTH DE ALBA GUTIERREZ',estudiante:'MARIANA NIEBLES GARCIA',solucion:'Concepto',lider:'victor',fecha:'2026-03-26',fechaFin:'2026-04-10'},
-  {id:'SC-13668',usuario:'ASHLEY CERVANTES MARQUEZ',estudiante:'OSCAR ROSALES',solucion:'Concepto',lider:'gabriela',fecha:'2026-04-07',fechaFin:''},
-  {id:'SC-13669',usuario:'GLADYS GUTIERREZ GARCIA',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Concepto',lider:'azhly',fecha:'2026-03-27',fechaFin:'2026-04-08'},
-  {id:'SC-13680',usuario:'ALEXANDER CÁRDENAS ARELLANA',estudiante:'DAVID AGUIRRE PEREZ',solucion:'Contestación de demanda',lider:'azhly',fecha:'2026-03-27',fechaFin:'2026-04-08'},
-  {id:'SC-13695',usuario:'GUSTAVO MEDINA GUERRO',estudiante:'RICARDO LOZANO MARRERO',solucion:'Demanda (restitución de inmueble arrendado)',lider:'angie',fecha:'2026-04-06',fechaFin:'2026-04-15'},
-  {id:'SC-13699',usuario:'DIVINA CEPEDA MIRANDA',estudiante:'CAMILO BARBAS AREVALO',solucion:'Concepto',lider:'victor',fecha:'2026-04-06',fechaFin:'2026-04-16'},
-  {id:'SC-13703',usuario:'HAIDER CALVO CERVANTES',estudiante:'ELIAS PAEZ',solucion:'Concepto',lider:'azhly',fecha:'2026-04-06',fechaFin:'2026-05-07'},
-  {id:'SC-13715',usuario:'PASCUAL SUAREZ CUADRADO',estudiante:'MARIANA NIEBLES GARCIA',solucion:'Concepto',lider:'angie',fecha:'2026-04-07',fechaFin:'2026-04-15'},
-  {id:'SC-13723',usuario:'XIOMARA ILLUECA GUTIERREZ',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-07',fechaFin:'2026-04-11'},
-  {id:'SC-13730',usuario:'XIOMARA ILLUECA GUTIERREZ',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-08',fechaFin:'2026-04-11'},
-  {id:'SC-13732',usuario:'MADELEINE MEJIA COBA',estudiante:'MAYRA IBAÑEZ',solucion:'Desestimiento',lider:'azhly',fecha:'2026-05-16',fechaFin:'2026-05-21'},
-  {id:'SC-13734',usuario:'YOREILAS DE LA CRUZ PADILLA',estudiante:'DAVID AGUIRRE PEREZ',solucion:'Concepto',lider:'angie',fecha:'2026-04-08',fechaFin:'2026-05-14'},
-  {id:'SC-13743',usuario:'XIOMARA ILLUECA GUTIERREZ',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-08',fechaFin:'2026-04-11'},
-  {id:'SC-13748',usuario:'XIOMARA ILLUECA GUTIERREZ',estudiante:'LEANDRA MARTINEZ ALVAREZ',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-08',fechaFin:'2026-04-11'},
-  {id:'SC-13749',usuario:'JENNIFER GOMEZ TANGARIFE',estudiante:'GABRIEL MERCADO INSIGNARES',solucion:'Concepto',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-04-29'},
-  {id:'SC-13750',usuario:'DAYAN LEONES BARRIOS',estudiante:'HUMBERTO PAEZ FERNANDEZ DE CASTRO',solucion:'Concepto',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-05-06'},
-  {id:'SC-13751',usuario:'WALTER MORA CASTILLO',estudiante:'GABRIEL MERCADO INSIGNARES',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-05-04'},
-  {id:'SC-13755',usuario:'HERNANDO CASSIANI PEREZ',estudiante:'HUMBERTO PAEZ FERNANDEZ DE CASTRO',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-05-06'},
-  {id:'SC-13759',usuario:'LOURDES PLATA DE ALBA',estudiante:'HUMBERTO PAEZ FERNANDEZ DE CASTRO',solucion:'Concepto',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-05-04'},
-  {id:'SC-13764',usuario:'REINALDO LEAL BRIÑEZ',estudiante:'MARIA DIAZ PADILLA',solucion:'Concepto',lider:'victor',fecha:'2026-04-09',fechaFin:'2026-04-21'},
-  {id:'SC-13767',usuario:'JESUS BARRANCO LUNA',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-09',fechaFin:'2026-05-04'},
-  {id:'SC-13770',usuario:'KAROLL LEON GUTIERREZ',estudiante:'MAYRA IBAÑEZ',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-04-09',fechaFin:'2026-04-21'},
-  {id:'SC-13780',usuario:'LILIA CALVO ALDANA',estudiante:'GABRIEL MERCADO INSIGNARES',solucion:'Demanda (ejecutiva)',lider:'angie',fecha:'2026-04-10',fechaFin:'2026-05-04'},
-  {id:'SC-13782',usuario:'DAVID ANGARITA AREVALO',estudiante:'DIEGO MUÑETON GARCIA',solucion:'Reclamación directa',lider:'angie',fecha:'2026-04-10',fechaFin:''},
-  {id:'SC-13787',usuario:'MARIO FERNANDEZ RODRIGUEZ',estudiante:'WALTER MARTINEZ CUSSA',solucion:'Derecho de petición',lider:'angie',fecha:'2026-04-10',fechaFin:'2026-05-05'},
-  {id:'SC-13794',usuario:'DANIEL CAÑAS CASTRO',estudiante:'TEYJANA MAESTRE LOPEZ',solucion:'Concepto',lider:'victor',fecha:'2026-04-13',fechaFin:'2026-05-05'},
-  {id:'SC-13805',usuario:'JUAN SANCHEZ MAURY',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Derecho de petición',lider:'angie',fecha:'2026-04-13',fechaFin:'2026-04-21'},
-  {id:'SC-13807',usuario:'MARIBEL BARRANCO RODRIGUEZ',estudiante:'TEYJANA MAESTRE',solucion:'Reclamación directa',lider:'victor',fecha:'2026-04-13',fechaFin:'2026-05-05'},
-  {id:'SC-13812',usuario:'HUGO DURAN VILLAFAÑE',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Concepto',lider:'angie',fecha:'2026-05-13',fechaFin:'2026-05-04'},
-  {id:'SC-13820',usuario:'JULIO OSPINO CASTILLO',estudiante:'SAMUEL PEÑA OJEDA',solucion:'Derecho de petición',lider:'victor',fecha:'2026-04-14',fechaFin:'2026-04-17'},
-  {id:'SC-13843',usuario:'RAFAEL LAMBRAÑO CAMPO',estudiante:'RICARDO LOZANO MARRERO',solucion:'Concepto',lider:'angie',fecha:'2026-04-15',fechaFin:'2026-04-24'},
-  {id:'SC-13844',usuario:'GUSTAVO MEDINA GUERRERO',estudiante:'RICARDO LOZANO MARRERO',solucion:'Demanda (ejecutiva)',lider:'angie',fecha:'2026-04-15',fechaFin:'2026-04-20'},
-  {id:'SC-13879',usuario:'ROCIO MERLANO LAPEIRA',estudiante:'JEIMY BUITRAGO MALAGON',solucion:'Demanda (ejecutiva)',lider:'angie',fecha:'2026-04-17',fechaFin:''},
-  {id:'SC-13920',usuario:'GERMAIN AMADOR NORIEGA',estudiante:'RICARDO LOZANO MARRERO',solucion:'Derecho de petición',lider:'angie',fecha:'2026-04-21',fechaFin:'2026-04-22'},
-  {id:'SC-13924',usuario:'DAVID SOLANO NAIZZIR',estudiante:'MARIA DIAZ PADILLA',solucion:'Concepto',lider:'azhly',fecha:'2026-04-21',fechaFin:'2026-05-07'},
-  {id:'SC-13935',usuario:'BETTY IGLESIA RANGEL',estudiante:'SAMUEL PEÑA',solucion:'Concepto',lider:'victor',fecha:'2026-04-21',fechaFin:'2026-05-05'},
-  {id:'SC-13953',usuario:'YERLIS DURAN CAMPO',estudiante:'KELLYS OSORIO NAVAS',solucion:'Concepto',lider:'azhly',fecha:'2026-04-23',fechaFin:'2026-05-06'},
-  {id:'SC-13985',usuario:'JESUS BARRANCO LUNA',estudiante:'JOANNA MENDOZA NAVARRO',solucion:'Derecho de petición',lider:'gabriela',fecha:'2026-04-27',fechaFin:'2026-05-04'},
-  {id:'SC-13986',usuario:'ARNULFO GRANADOS RODRIGUEZ',estudiante:'MIGUEL CHARRY PEREZ',solucion:'Concepto',lider:'azhly',fecha:'2026-04-27',fechaFin:'2026-05-06'},
-  {id:'SC-14030',usuario:'BRIGIDA CAUSIL MORA',estudiante:'DANIELA MORON AMOROCHO',solucion:'Concepto',lider:'victor',fecha:'2026-04-29',fechaFin:'2026-05-08'},
-  {id:'SC-14039',usuario:'ARTURO RAMIREZ RODON',estudiante:'MARIANA NIEBLES GARCIA',solucion:'Concepto',lider:'victor',fecha:'2026-04-30',fechaFin:''},
-  {id:'SC-14045',usuario:'MONICA TOLOZA CAMPO',estudiante:'ORLANDO MANOTAS PEÑA',solucion:'Derecho de petición',lider:'azhly',fecha:'2026-05-04',fechaFin:'2026-05-07'},
-];
+// FINALIZADOS eliminado — todos los casos finalizados están en Supabase (cases con subestado==='Finalizado')
+const FINALIZADOS=[];
 
 // ══════════════════════════════════════════
 //  ANALÍTICA
@@ -3651,7 +3510,7 @@ let anPeriodo='todos';
 
 function renderAnalitica(){
   // Build available periods dynamically
-  const allFin=FINALIZADOS;
+  const allFin=cases.filter(c=>c.subestado==='Finalizado');
   const allAct=cases.filter(c=>c.subestado!=='Finalizado');
   const periodos=[...new Set([...allFin,...allAct].map(c=>c.periodo).filter(Boolean))].sort();
 
@@ -3804,7 +3663,7 @@ function setAnPeriodo(p){
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
 function renderFinTable(finList){
-  const fin=finList||(anPeriodo==='todos'?FINALIZADOS:FINALIZADOS.filter(f=>f.periodo===anPeriodo));
+  const fin=finList||(anPeriodo==='todos'?cases.filter(c=>c.subestado==='Finalizado'):cases.filter(c=>c.subestado==='Finalizado'&&c.periodo===anPeriodo));
   const q=(document.getElementById('fin-srch')?.value||'').toLowerCase();
   const lf=document.getElementById('fin-lider')?.value||'';
   let list=[...fin].sort((a,b)=>new Date(b.fechaFin||b.fecha)-new Date(a.fechaFin||a.fecha));
@@ -3832,7 +3691,7 @@ function renderFinTable(finList){
 //  EXPORT PDF (print)
 // ══════════════════════════════════════════
 function exportPDF(){
-  const fin=FINALIZADOS;
+  const fin=cases.filter(c=>c.subestado==='Finalizado');
   const act=cases.filter(c=>c.subestado!=='Finalizado');
   const total=fin.length+act.length;
   const pct=Math.round(fin.length/total*100);
