@@ -280,6 +280,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         <button class="tab" onclick="sw('checklist')">✅ Checklist</button>
         <button class="tab" onclick="sw('importar')">📥 Importar</button>
         <button class="tab" onclick="sw('consultorio')">⚖️ Consultorio</button>
+        <button class="tab" onclick="sw('directorio')">👥 Directorio</button>
       </div>
     </div>
     <div class="tr">
@@ -631,6 +632,55 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
     <!-- ══ CONSULTORIO ══ -->
     <div class="vc" id="vc-consultorio" style="padding-top:0"></div>
 
+    <!-- ══ DIRECTORIO ══ -->
+    <div class="vc" id="vc-directorio">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">👥 Directorio de estudiantes</div>
+        <input class="srch" id="dir-srch" placeholder="Buscar por nombre, correo o programa…" oninput="renderDirectorio()" style="flex:1;min-width:200px;max-width:360px">
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btnsave" onclick="abrirModalNuevoEst()" style="font-size:12px;padding:6px 14px">+ Agregar estudiante</button>
+          <label class="btnsec" style="font-size:12px;padding:6px 14px;cursor:pointer">
+            📥 Importar
+            <input type="file" accept=".xlsx,.xls,.pdf,.csv" style="display:none" onchange="importarDirectorio(this)">
+          </label>
+        </div>
+      </div>
+      <div id="dir-duplicados" style="display:none;margin-bottom:14px;background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);border-radius:10px;padding:12px 16px"></div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:10px" id="dir-count"></div>
+      <div class="tbl">
+        <div class="th" style="grid-template-columns:2fr 2fr 1fr 80px">
+          <span>Nombre completo</span><span>Correo</span><span>Programa</span><span></span>
+        </div>
+        <div id="dir-list"></div>
+      </div>
+    </div>
+
+    <!-- Modal nuevo/editar estudiante -->
+    <div class="overlay" id="mod-nuevo-est" style="display:none">
+      <div class="modal" style="max-width:420px">
+        <div class="mhdr">
+          <div class="mtitle" id="nest-title">Agregar estudiante</div>
+          <button class="mclose" onclick="document.getElementById('mod-nuevo-est').style.display='none'">✕</button>
+        </div>
+        <div class="mbody">
+          <div class="fg"><label class="fl">Nombre completo *</label>
+            <input class="fi" id="nest-nombre" placeholder="APELLIDO APELLIDO NOMBRE NOMBRE" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="fg"><label class="fl">Correo institucional *</label>
+            <input class="fi" id="nest-correo" placeholder="usuario@cuc.edu.co"></div>
+          <div class="fg"><label class="fl">Programa</label>
+            <select class="fsel" id="nest-prog">
+              <option value="Presencial">Presencial</option>
+              <option value="Virtual">Virtual</option>
+            </select>
+          </div>
+        </div>
+        <div class="mftr">
+          <button class="btnsec" onclick="document.getElementById('mod-nuevo-est').style.display='none'">Cancelar</button>
+          <button class="btnsave" onclick="guardarNuevoEst()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
 <!-- ══ MODAL ACCIÓN ══ -->
 <div class="overlay" id="mod-accion">
   <div class="modal">
@@ -688,7 +738,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div id="cambios-box" style="margin-top:16px;display:none">
         <div style="height:1px;background:var(--bd);margin-bottom:16px"></div>
         <div class="msect">Cambiar datos del caso</div>
-        <div class="fgrid2">
+        <div class="fgrid2" id="cambios-fgrid">
           <div class="fg">
             <label class="fl">Cambiar tipo de solución</label>
             <select class="fsel" id="m-newsol"><option value="">— sin cambio —</option></select>
@@ -703,7 +753,12 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
           <div style="height:1px;background:var(--bd);margin-bottom:14px"></div>
           <div class="fg">
             <label class="fl">🔄 Nuevo estudiante asignado *</label>
-            <input class="fi" id="m-new-est" placeholder="Nombre completo del nuevo estudiante (mayúsculas)">
+            <div style="position:relative">
+              <input class="fi" id="m-new-est" placeholder="Escribe para buscar…" autocomplete="off"
+                oninput="buscarEstudiante(this.value,'reasig-est-list'); generarMsgReasig()"
+                onblur="setTimeout(()=>document.getElementById('reasig-est-list').style.display='none',200)">
+              <div id="reasig-est-list" style="display:none;position:absolute;z-index:999;background:var(--s2);border:1px solid var(--bd);border-radius:8px;max-height:200px;overflow-y:auto;width:100%;margin-top:2px"></div>
+            </div>
           </div>
           <div id="reasig-msg-box" style="display:none;margin-top:4px">
             <div class="msect" style="margin-bottom:8px">Mensaje para el nuevo estudiante — pega en Teams</div>
@@ -913,89 +968,91 @@ const USERS=[
 ];
 
 // ── Directorio de estudiantes ──
-const DIRECTORIO=[
-  {nombre:'ALVAREZ PINZON FERNANDO DAVID',correo:'falvarez6@cuc.edu.co'},
-  {nombre:'BARBAS AREVALO CAMILO ANDRES',correo:'cbarbas@cuc.edu.co'},
-  {nombre:'BARRERA CAIROSA KEVIN JUNIOR',correo:'kbarrera2@cuc.edu.co'},
-  {nombre:'BARRIOS PEREZ ROSIMAR ANDREA',correo:'rbarrios19@cuc.edu.co'},
-  {nombre:'BOLAÑO DANIELS MARIANA',correo:'mbolano18@cuc.edu.co'},
-  {nombre:'BUITRAGO MALAGON JEIMY TATIANA',correo:'jbuitrag2@cuc.edu.co'},
-  {nombre:'CABARCAS CALLEJA YARLIS DANIELA',correo:'ycabarca10@cuc.edu.co'},
-  {nombre:'CALDERON PEREZ MARIA FERNANDA',correo:'mcaldero16@cuc.edu.co'},
-  {nombre:'CAMPO ALVAREZ LUIS MIGUEL',correo:'lcampo17@cuc.edu.co'},
-  {nombre:'CARBONELL ARIAS DANIELA ALEJANDRA',correo:'dcarbone2@cuc.edu.co'},
-  {nombre:'CHARRY PEREZ MIGUEL ANGEL',correo:'mcharry1@cuc.edu.co'},
-  {nombre:'CORONELL MOLINARES ANGELLY MARCELA',correo:'acoronel9@cuc.edu.co'},
-  {nombre:'CORPUS BOWIE MAYRA ESTELA',correo:'mcorpus@cuc.edu.co'},
-  {nombre:'CRESPO FANDINO ANGI PAOLA',correo:'acrespo4@cuc.edu.co'},
-  {nombre:'DE LA HOZ VILLADIEGO OSNAIDER ALFREDO',correo:'odelahoz5@cuc.edu.co'},
-  {nombre:'DIAZ BENAVIDES BRAYAN ALFONSO',correo:'bdiaz26@cuc.edu.co'},
-  {nombre:'DIAZ PADILLA MARIA TERESA',correo:'mdiaz70@cuc.edu.co'},
-  {nombre:'DONADO BARRIOS GABRIELA',correo:'gdonado3@cuc.edu.co'},
-  {nombre:'FERREIRA RONDANO YASSER ALFONSO',correo:'yferreri@cuc.edu.co'},
-  {nombre:'FLEREZ ISAZA PEDRO JOSE',correo:'pflerez@cuc.edu.co'},
-  {nombre:'FRANCO VELEZ JOSE CAMILO',correo:'jfranco19@cuc.edu.co'},
-  {nombre:'GARCIA YANCI IVANA ANDREA',correo:'igarcia15@cuc.edu.co'},
-  {nombre:'GUERRA MANJARRES DANIELA LUCIA',correo:'dguerra11@cuc.edu.co'},
-  {nombre:'GUTIERREZ LARRARTE LUISA FERNANDA',correo:'lgutierr54@cuc.edu.co'},
-  {nombre:'HOYOS FERNANDEZ SOFIA CAROLINA',correo:'shoyos9@cuc.edu.co'},
-  {nombre:'LIVINGSTON MITCHELL ANA SOFIA',correo:'alivings3@cuc.edu.co'},
-  {nombre:'LOZANO MARRERO RICARDO MARIO',correo:'rlozano5@cuc.edu.co'},
-  {nombre:'MANOTAS PEÑA ORLANDO JOSE',correo:'omanotas@cuc.edu.co'},
-  {nombre:'MARTINEZ SAMUR RAFAEL ARMANDO',correo:'rmartine30@cuc.edu.co'},
-  {nombre:'MCDOWELL BENT MERYANNE MAYGETH',correo:'mmcdowe@cuc.edu.co'},
-  {nombre:'MEJIA ALMARIO LAUREN DANIELA',correo:'lmejia30@cuc.edu.co'},
-  {nombre:'MEJIA SALAZAR ANGIE VANESSA',correo:'amejia39@cuc.edu.co'},
-  {nombre:'NARVAEZ PAZ VALENTINA',correo:'vnarvaez@cuc.edu.co'},
-  {nombre:'NIEBLES GARCIA MARIANA',correo:'mniebles15@cuc.edu.co'},
-  {nombre:'OSORIO NAVAS KELLYS JHOANA',correo:'kosorio9@cuc.edu.co'},
-  {nombre:'PADILLA ROMO AZHLY DANIELA',correo:'apadilla38@cuc.edu.co'},
-  {nombre:'PARRA CASTAÑEDA ALI JESUS',correo:'aparra16@cuc.edu.co'},
-  {nombre:'PEÑA DE LA HOZ YERLIN CAROLINA',correo:'ypena13@cuc.edu.co'},
-  {nombre:'PIMIENTA SALAZAR SILVANA',correo:'spimient5@cuc.edu.co'},
-  {nombre:'POLANCO CERPA VICTOR ANDRES',correo:'vpolanco@cuc.edu.co'},
-  {nombre:'RACEDO CAICEDO WILSON RAFAEL',correo:'wracedo@cuc.edu.co'},
-  {nombre:'RACEDO REDONDO HELEN STEFANY',correo:'hracedo1@cuc.edu.co'},
-  {nombre:'REYES ARAUJO CARLOS ANDRES',correo:'creyes13@cuc.edu.co'},
-  {nombre:'RINCONES LAGUNA JUAN CAMILO',correo:'jrincone@cuc.edu.co'},
-  {nombre:'ROMERO FIGUEROA NICOLL DEL CARMEN',correo:'nromero12@cuc.edu.co'},
-  {nombre:'SANTANA BILBAO MARTHA LUZ',correo:'msantana6@cuc.edu.co'},
-  {nombre:'VALDEBLANQUEZ ARREGOCES SHARON KEILETH',correo:'svaldebl@cuc.edu.co'},
-  {nombre:'CANAS PENA RUBEN DE JESUS',correo:'rcanas1@cuc.edu.co'},
-  {nombre:'HERNANDEZ RODRIGUEZ MICHELL CAROLINA',correo:'mhernand99@cuc.edu.co'},
-  {nombre:'MAESTRE LOPEZ TEYJANA CHIQUINQUIRA',correo:'tmaestre1@cuc.edu.co'},
-  {nombre:'MARTINEZ CUSSA WALTER DE JESUS',correo:'wmartine5@cuc.edu.co'},
-  {nombre:'MATTA SUAREZ DANNA PAOLA',correo:'dmatta@cuc.edu.co'},
-  {nombre:'MENDOZA NAVARRO JOANNA VANESSA',correo:'jmendoza91@cuc.edu.co'},
-  {nombre:'MERCADO SANTIAGO GRACE CRISTINA',correo:'gmercado16@cuc.edu.co'},
-  {nombre:'MORON AMOROCHO DANIELA SOFIA',correo:'dmoron2@cuc.edu.co'},
-  {nombre:'ORTEGA GALVIS KATHERIN ESTHER',correo:'kortega12@cuc.edu.co'},
-  {nombre:'PALACIO SIOSI ELIAS SANTANDER',correo:'epalacio@cuc.edu.co'},
-  {nombre:'PEÑA MARTINEZ LUISA FERNANDA',correo:'lpena30@cuc.edu.co'},
-  {nombre:'PEÑA OJEDA SAMUEL DAVID',correo:'spena15@cuc.edu.co'},
-  {nombre:'PINA CONTRERAS JOSE JORGE',correo:'jpina@cuc.edu.co'},
-  {nombre:'POLO HERNANDEZ IVAN ANDRES',correo:'ipolo13@cuc.edu.co'},
-  {nombre:'RADA PABON MARIA FELICIDAD',correo:'mrada7@cuc.edu.co'},
-  {nombre:'RINCON JARAMILLO MARIA FERNANDA',correo:'mrincon9@cuc.edu.co'},
-  {nombre:'ROSALES LOPEZ OSCAR CAMILO',correo:'orosales@cuc.edu.co'},
-  {nombre:'TAFUR PEREZ SARA JUDITH',correo:'stafur@cuc.edu.co'},
-  {nombre:'AGUIRRE PEREZ DAVID',correo:'daguirre10@cuc.edu.co'},
-  {nombre:'CENTENO CADENA OSWALDO',correo:'ocenteno@cuc.edu.co'},
-  {nombre:'DE LA OSSA RADA LUIS FERNANDO',correo:'ldelaoss@cuc.edu.co'},
-  {nombre:'DIAZ EPIAYU NEIL',correo:'ndiaz35@cuc.edu.co'},
-  {nombre:'IBAÑEZ ECHEVERRY MAYRA',correo:'mibane2@cuc.edu.co'},
-  {nombre:'LASTRA DOMINGUEZ ANDREA',correo:'alastra4@cuc.edu.co'},
-  {nombre:'MARTINEZ ALVAREZ LEANDRA',correo:'lmartine40@cuc.edu.co'},
-  {nombre:'MEDERO COTES JORGE',correo:'jmedero@cuc.edu.co'},
-  {nombre:'MERCADO INSIGNARES GABRIEL',correo:'gmercado13@cuc.edu.co'},
-  {nombre:'PAEZ BARROS ELIAS',correo:'epaez3@cuc.edu.co'},
-  {nombre:'PERTUZ HERNANDEZ KAROL',correo:'kpertuz@cuc.edu.co'},
-  {nombre:'RUA ARENAS ANGELL',correo:'arua3@cuc.edu.co'},
-  {nombre:'HERNANDEZ SANTIAGO DANIEL',correo:'dhernand46@cuc.edu.co'},
-  {nombre:'LARA CANTILLO KAREN',correo:'klara4@cuc.edu.co'},
-  {nombre:'HORTA BELTRAN LAURA',correo:'lhorta2@cuc.edu.co'},
-  {nombre:'NAVAS OSORIO KELLYS',correo:'kosorio9@cuc.edu.co'},
+let DIRECTORIO=[
+  {nombre:'ALVAREZ PINZON FERNANDO DAVID',correo:'falvarez6@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARBAS AREVALO CAMILO ANDRES',correo:'cbarbas@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARRERA CAIROSA KEVIN JUNIOR',correo:'kbarrera2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARRIOS PEREZ ROSIMAR ANDREA',correo:'rbarrios19@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BOLAÑO DANIELS MARIANA',correo:'mbolano18@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BUITRAGO MALAGON JEIMY TATIANA',correo:'jbuitrag2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CABARCAS CALLEJA YARLIS DANIELA',correo:'ycabarca10@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CALDERON PEREZ MARIA FERNANDA',correo:'mcaldero16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CAMPO ALVAREZ LUIS MIGUEL',correo:'lcampo17@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CARBONELL ARIAS DANIELA ALEJANDRA',correo:'dcarbone2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CHARRY PEREZ MIGUEL ANGEL',correo:'mcharry1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CORONELL MOLINARES ANGELLY MARCELA',correo:'acoronel9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CORPUS BOWIE MAYRA ESTELA',correo:'mcorpus@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CRESPO FANDINO ANGI PAOLA',correo:'acrespo4@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DE LA HOZ VILLADIEGO OSNAIDER ALFREDO',correo:'odelahoz5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DIAZ BENAVIDES BRAYAN ALFONSO',correo:'bdiaz26@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DIAZ PADILLA MARIA TERESA',correo:'mdiaz70@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DONADO BARRIOS GABRIELA',correo:'gdonado3@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FERREIRA RONDANO YASSER ALFONSO',correo:'yferreri@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FLEREZ ISAZA PEDRO JOSE',correo:'pflerez@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FRANCO VELEZ JOSE CAMILO',correo:'jfranco19@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GARCIA YANCI IVANA ANDREA',correo:'igarcia15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GUERRA MANJARRES DANIELA LUCIA',correo:'dguerra11@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GUTIERREZ LARRARTE LUISA FERNANDA',correo:'lgutierr54@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HOYOS FERNANDEZ SOFIA CAROLINA',correo:'shoyos9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LIVINGSTON MITCHELL ANA SOFIA',correo:'alivings3@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LOZANO MARRERO RICARDO MARIO',correo:'rlozano5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MANOTAS PEÑA ORLANDO JOSE',correo:'omanotas@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MARTINEZ SAMUR RAFAEL ARMANDO',correo:'rmartine30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MCDOWELL BENT MERYANNE MAYGETH',correo:'mmcdowe@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MEJIA ALMARIO LAUREN DANIELA',correo:'lmejia30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MEJIA SALAZAR ANGIE VANESSA',correo:'amejia39@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NARVAEZ PAZ VALENTINA',correo:'vnarvaez@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NIEBLES GARCIA MARIANA',correo:'mniebles15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'OSORIO NAVAS KELLYS JHOANA',correo:'kosorio9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PADILLA ROMO AZHLY DANIELA',correo:'apadilla38@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PARRA CASTAÑEDA ALI JESUS',correo:'aparra16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA DE LA HOZ YERLIN CAROLINA',correo:'ypena13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PIMIENTA SALAZAR SILVANA',correo:'spimient5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'POLANCO CERPA VICTOR ANDRES',correo:'vpolanco@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RACEDO CAICEDO WILSON RAFAEL',correo:'wracedo@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RACEDO REDONDO HELEN STEFANY',correo:'hracedo1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'REYES ARAUJO CARLOS ANDRES',correo:'creyes13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RINCONES LAGUNA JUAN CAMILO',correo:'jrincone@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ROMERO FIGUEROA NICOLL DEL CARMEN',correo:'nromero12@cuc.edu.co',programa:'Presencial'},
+  {nombre:'SANTANA BILBAO MARTHA LUZ',correo:'msantana6@cuc.edu.co',programa:'Presencial'},
+  {nombre:'VALDEBLANQUEZ ARREGOCES SHARON KEILETH',correo:'svaldebl@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CANAS PENA RUBEN DE JESUS',correo:'rcanas1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HERNANDEZ RODRIGUEZ MICHELL CAROLINA',correo:'mhernand99@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MAESTRE LOPEZ TEYJANA CHIQUINQUIRA',correo:'tmaestre1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MARTINEZ CUSSA WALTER DE JESUS',correo:'wmartine5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MATTA SUAREZ DANNA PAOLA',correo:'dmatta@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MENDOZA NAVARRO JOANNA VANESSA',correo:'jmendoza91@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MERCADO SANTIAGO GRACE CRISTINA',correo:'gmercado16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MORON AMOROCHO DANIELA SOFIA',correo:'dmoron2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ORTEGA GALVIS KATHERIN ESTHER',correo:'kortega12@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PALACIO SIOSI ELIAS SANTANDER',correo:'epalacio@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA MARTINEZ LUISA FERNANDA',correo:'lpena30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA OJEDA SAMUEL DAVID',correo:'spena15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PINA CONTRERAS JOSE JORGE',correo:'jpina@cuc.edu.co',programa:'Presencial'},
+  {nombre:'POLO HERNANDEZ IVAN ANDRES',correo:'ipolo13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RADA PABON MARIA FELICIDAD',correo:'mrada7@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RINCON JARAMILLO MARIA FERNANDA',correo:'mrincon9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ROSALES LOPEZ OSCAR CAMILO',correo:'orosales@cuc.edu.co',programa:'Presencial'},
+  {nombre:'TAFUR PEREZ SARA JUDITH',correo:'stafur@cuc.edu.co',programa:'Presencial'},
+  {nombre:'AGUIRRE PEREZ DAVID',correo:'daguirre10@cuc.edu.co',programa:'Virtual'},
+  {nombre:'CENTENO CADENA OSWALDO',correo:'ocenteno@cuc.edu.co',programa:'Virtual'},
+  {nombre:'DE LA OSSA RADA LUIS FERNANDO',correo:'ldelaoss@cuc.edu.co',programa:'Virtual'},
+  {nombre:'DIAZ EPIAYU NEIL',correo:'ndiaz35@cuc.edu.co',programa:'Virtual'},
+  {nombre:'IBAÑEZ ECHEVERRY MAYRA',correo:'mibane2@cuc.edu.co',programa:'Virtual'},
+  {nombre:'LASTRA DOMINGUEZ ANDREA',correo:'alastra4@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MARTINEZ ALVAREZ LEANDRA',correo:'lmartine40@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MEDERO COTES JORGE',correo:'jmedero@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MERCADO INSIGNARES GABRIEL',correo:'gmercado13@cuc.edu.co',programa:'Virtual'},
+  {nombre:'PAEZ BARROS ELIAS',correo:'epaez3@cuc.edu.co',programa:'Virtual'},
+  {nombre:'PERTUZ HERNANDEZ KAROL',correo:'kpertuz@cuc.edu.co',programa:'Virtual'},
+  {nombre:'RUA ARENAS ANGELL',correo:'arua3@cuc.edu.co',programa:'Virtual'},
+  {nombre:'HERNANDEZ SANTIAGO DANIEL',correo:'dhernand46@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LARA CANTILLO KAREN',correo:'klara4@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HORTA BELTRAN LAURA',correo:'lhorta2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NAVAS OSORIO KELLYS',correo:'kosorio9@cuc.edu.co',programa:'Presencial'},
 ];
+// Cargar ediciones guardadas en localStorage
+(function(){try{const saved=localStorage.getItem('ac_directorio_v1');if(saved)DIRECTORIO=JSON.parse(saved);}catch(e){}})();
 
 function getCorreoEstudiante(nombre){
   if(!nombre) return null;
@@ -1321,6 +1378,7 @@ function initCases(){
 //  STATE
 // ══════════════════════════════════════════
 let cu=null, selLogin=null, filter='todos', caseId=null, selAcc=null, hist=[], studentFilter='';
+const localSaved=new Map(); // caseId → timestamp de última escritura local
 
 // ══════════════════════════════════════════
 //  SUPABASE
@@ -1343,8 +1401,7 @@ async function loadC(){
       subestado:r.subestado||'Esperando notificación por Teams', fecha:r.fecha||'',
       periodo:r.periodo||'2026-1', correcciones:r.correcciones||0,
       fechaUltimaAccion:r.fecha_ultima_accion||r.fecha||'',
-      estado:r.estado||'ASIGNADA', usuario:r.usuario||'',
-      estudianteAnterior:r.estudiante_anterior||''
+      estado:r.estado||'ASIGNADA', usuario:r.usuario||''
     }));
   }catch(e){
     console.error('loadC exception:',e);
@@ -1356,12 +1413,12 @@ async function loadC(){
 async function saveC(caseIdToSave){
   const c=cases.find(x=>x.id===caseIdToSave);
   if(!c) return;
+  localSaved.set(caseIdToSave, Date.now()); // proteger contra sync durante 15s
   const{error}=await sb.from('casos').upsert({
     id:c.id, estudiante:c.estudiante, lider:c.lider||null, solucion:c.solucion,
     subestado:c.subestado, fecha:c.fecha, periodo:c.periodo||'2026-1',
     correcciones:c.correcciones||0, fecha_ultima_accion:c.fechaUltimaAccion,
-    estado:c.estado||'ASIGNADA', usuario:c.usuario||'',
-    estudiante_anterior:c.estudianteAnterior||null
+    estado:c.estado||'ASIGNADA', usuario:c.usuario||''
   },{onConflict:'id'});
   if(error) console.error('saveC error:',error);
 }
@@ -1582,7 +1639,7 @@ function sw(name){
   document.querySelectorAll('.vc').forEach(v=>v.classList.remove('on'));
   document.getElementById('vc-'+name).classList.add('on');
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',
-    ['casos','todos','kanban','eisenhower','dashboard','historial','analitica','compromisos','checklist','importar','consultorio'][i]===name));
+    ['casos','todos','kanban','eisenhower','dashboard','historial','analitica','compromisos','checklist','importar','consultorio','directorio'][i]===name));
   if(name==='todos') renderTodos();
   if(name==='kanban') renderKanban();
   if(name==='eisenhower') renderEisenhower();
@@ -1591,6 +1648,7 @@ function sw(name){
   if(name==='analitica') renderAnalitica();
   if(name==='checklist') renderChecklist();
   if(name==='consultorio') renderConsultorio();
+  if(name==='directorio') renderDirectorio();
   if(name==='compromisos'){loadCompromisosDB().then(d=>{compromisos=d;renderCompromisos();});}
 }
 
@@ -2125,16 +2183,30 @@ function buscarEstudiante(q, listId){
 }
 
 function selEstudiante(nombre, correo, listId){
-  // Determinar si es el modal de agregar o de editar
   if(listId==='a-est-list'){
     document.getElementById('a-est').value=nombre;
-    // Guardar correo en data attribute
     document.getElementById('a-est').dataset.correo=correo;
+  } else if(listId==='reasig-est-list'){
+    document.getElementById('m-new-est').value=nombre;
+    document.getElementById('m-new-est').dataset.correo=correo;
+    generarMsgReasig();
   } else {
     document.getElementById('edit-est').value=nombre;
     document.getElementById('edit-est').dataset.correo=correo;
   }
   document.getElementById(listId).style.display='none';
+}
+
+function generarMsgReasig(){
+  const nombre=document.getElementById('m-new-est').value.trim();
+  const msgBox=document.getElementById('reasig-msg-box');
+  if(nombre.length>3){
+    const primerNombre=nombre.split(' ').slice(0,2).join(' ');
+    document.getElementById('reasig-protxt').textContent=PROFORMAS.reasignacion_nuevo(caseId,primerNombre);
+    msgBox.style.display='block';
+  } else {
+    msgBox.style.display='none';
+  }
 }
 let importRows=[];
 
@@ -2849,6 +2921,8 @@ function openAcc(id){
   document.getElementById('reasig-box').style.display='none';
   document.getElementById('m-new-est').value='';
   document.getElementById('reasig-msg-box').style.display='none';
+  document.getElementById('reasig-est-list').style.display='none';
+  document.getElementById('cambios-fgrid').style.display='';
   document.getElementById('copybtn').textContent='Copiar';
   document.getElementById('copybtn').classList.remove('done');
 
@@ -2909,6 +2983,9 @@ function openAcc(id){
     relevant=ACCIONES.filter(a=>['respondio','cargue_emma'].includes(a.id));
   else if(c.subestado.includes('Aprobado'))
     relevant=ACCIONES.filter(a=>['docs_cargados','cargue_emma'].includes(a.id));
+  else if(c.subestado==='Se reasignará')
+    relevant=ACCIONES.filter(a=>['respondio','sin_resp_1','reasignar'].includes(a.id))
+      .map(a=>a.id==='respondio'?{...a,label:'✅ Nuevo estudiante notificado — activar caso',icon:'✅'}:a);
 
   document.getElementById('mopts').innerHTML=relevant.map(a=>
     `<div class="opt" onclick="selAccion('${a.id}')" id="opt-${a.id}" style="border-color:${a.color}20">
@@ -2953,23 +3030,15 @@ function selAccion(id){
     reasigBox.style.display='block';
     corrBox.style.display='none';
     notifBox.style.display='none';
+    document.getElementById('cambios-fgrid').style.display='none';
     // Generar mensaje al nuevo estudiante cuando escriban el nombre
     const inp=document.getElementById('m-new-est');
-    inp.oninput=()=>{
-      const nombre=inp.value.trim();
-      const msgBox=document.getElementById('reasig-msg-box');
-      if(nombre.length>3){
-        const primerNombre=nombre.split(' ').slice(0,2).join(' ');
-        document.getElementById('reasig-protxt').textContent=PROFORMAS.reasignacion_nuevo(caseId,primerNombre);
-        msgBox.style.display='block';
-      } else {
-        msgBox.style.display='none';
-      }
-    };
+    inp.oninput=()=>generarMsgReasig();
   } else {
     corrBox.style.display='none';
     notifBox.style.display='none';
     reasigBox.style.display='none';
+    document.getElementById('cambios-fgrid').style.display='';
   }
 
   // Proforma
@@ -3454,6 +3523,7 @@ async function saveAcc(){
           'En creación de carpeta SA (falta firma del usuario)':'En creación de carpeta SA (falta firma de Jose Saade)',
           'En creación de carpeta SA (falta firma de Jose Saade)':'Carpeta creada donde Cris',
           'Carpeta creada donde Cris':'Aprobado por el area (a espera de carga de documentos en Emma)',
+          'Se reasignará':'Esperando notificación por Teams',
         };
         c.subestado=map[c.subestado]||c.subestado;
       }
@@ -4004,6 +4074,9 @@ function startRealtime(){
         data.forEach(r=>{
           const idx=cases.findIndex(c=>c.id===r.id);
           if(idx>=0){
+            // No pisar si fue guardado localmente hace menos de 15s (race condition)
+            const lastSave=localSaved.get(r.id)||0;
+            if(Date.now()-lastSave<15000) return;
             const c=cases[idx];
             // Normalizar null a '' para comparar correctamente
             const rLider=r.lider||'';
@@ -4199,6 +4272,186 @@ function toggleTheme(){
 function syncThemeBtn(){
   const btn=document.getElementById('theme-toggle');
   if(btn) btn.textContent=document.body.classList.contains('light')?'☀️':'🌙';
+}
+
+// ══════════════════════════════════════════
+//  DIRECTORIO DE ESTUDIANTES
+// ══════════════════════════════════════════
+function saveDirectorio(){
+  try{localStorage.setItem('ac_directorio_v1',JSON.stringify(DIRECTORIO));}catch(e){}
+}
+
+function renderDirectorio(){
+  const q=(document.getElementById('dir-srch')?.value||'').toUpperCase().trim();
+  const lista=q?DIRECTORIO.filter(d=>d.nombre.includes(q)||d.correo.toUpperCase().includes(q)||(d.programa||'').toUpperCase().includes(q)):DIRECTORIO;
+  const sorted=[...lista].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  document.getElementById('dir-count').textContent=`${sorted.length} estudiante${sorted.length!==1?'s':''} · ${DIRECTORIO.filter(d=>d.programa==='Virtual').length} virtual · ${DIRECTORIO.filter(d=>d.programa==='Presencial').length} presencial`;
+  document.getElementById('dir-list').innerHTML=sorted.map((d,i)=>{
+    const idx=DIRECTORIO.indexOf(d);
+    const progColor=d.programa==='Virtual'?'var(--pur)':'var(--blu)';
+    return `<div class="tr2" style="grid-template-columns:2fr 2fr 1fr 80px">
+      <span style="font-size:12px;font-weight:500">${d.nombre}</span>
+      <span style="font-size:11px;color:var(--mut)">${d.correo}</span>
+      <span><span style="font-size:10px;border:1px solid ${progColor};color:${progColor};border-radius:5px;padding:2px 7px">${d.programa||'—'}</span></span>
+      <span style="display:flex;gap:4px">
+        <button class="actbtn" onclick="editarEst(${idx})" title="Editar" style="padding:3px 6px">✏️</button>
+        <button class="actbtn" onclick="eliminarEst(${idx})" title="Eliminar" style="padding:3px 6px;color:var(--red)">✕</button>
+      </span>
+    </div>`;
+  }).join('');
+  detectarDuplicados();
+}
+
+function detectarDuplicados(){
+  const porCorreo={};
+  DIRECTORIO.forEach((d,i)=>{
+    if(!porCorreo[d.correo]) porCorreo[d.correo]=[];
+    porCorreo[d.correo].push({...d,idx:i});
+  });
+  const dupes=Object.entries(porCorreo).filter(([,arr])=>arr.length>1);
+  const box=document.getElementById('dir-duplicados');
+  if(dupes.length===0){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">⚠️ ${dupes.length} correo${dupes.length>1?'s':''} con nombres distintos — posibles duplicados</div>`
+    +dupes.map(([correo,arr])=>`
+      <div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:8px">
+        <div style="font-size:10px;color:var(--mut);margin-bottom:5px">${correo}</div>
+        ${arr.map(e=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:11px;flex:1">${e.nombre}</span>
+          <button class="actbtn" onclick="fusionarEst(${e.idx},'${correo}')" style="font-size:10px;padding:2px 8px;background:rgba(240,165,0,.15);color:var(--gold);border-color:rgba(240,165,0,.3)">Mantener este</button>
+        </div>`).join('')}
+      </div>`).join('');
+}
+
+function fusionarEst(idxMantener, correo){
+  // Quedar solo con el seleccionado para ese correo
+  const mantener=DIRECTORIO[idxMantener];
+  DIRECTORIO=DIRECTORIO.filter((d,i)=>d.correo!==correo||i===idxMantener);
+  saveDirectorio();
+  renderDirectorio();
+  showToast(`✅ Fusionado — queda: ${mantener.nombre}`);
+}
+
+let nestEditIdx=-1;
+function abrirModalNuevoEst(){
+  nestEditIdx=-1;
+  document.getElementById('nest-title').textContent='Agregar estudiante';
+  document.getElementById('nest-nombre').value='';
+  document.getElementById('nest-correo').value='';
+  document.getElementById('nest-prog').value='Presencial';
+  document.getElementById('mod-nuevo-est').style.display='flex';
+}
+
+function editarEst(idx){
+  nestEditIdx=idx;
+  const d=DIRECTORIO[idx];
+  document.getElementById('nest-title').textContent='Editar estudiante';
+  document.getElementById('nest-nombre').value=d.nombre;
+  document.getElementById('nest-correo').value=d.correo;
+  document.getElementById('nest-prog').value=d.programa||'Presencial';
+  document.getElementById('mod-nuevo-est').style.display='flex';
+}
+
+function guardarNuevoEst(){
+  const nombre=document.getElementById('nest-nombre').value.trim().toUpperCase();
+  const correo=document.getElementById('nest-correo').value.trim().toLowerCase();
+  const programa=document.getElementById('nest-prog').value;
+  if(!nombre||!correo){showToast('⚠️ Nombre y correo son obligatorios');return;}
+  if(nestEditIdx>=0){
+    DIRECTORIO[nestEditIdx]={nombre,correo,programa};
+  } else {
+    DIRECTORIO.push({nombre,correo,programa});
+  }
+  saveDirectorio();
+  document.getElementById('mod-nuevo-est').style.display='none';
+  renderDirectorio();
+  showToast(nestEditIdx>=0?'✅ Estudiante actualizado':'✅ Estudiante agregado');
+}
+
+function eliminarEst(idx){
+  if(!confirm(`¿Eliminar a ${DIRECTORIO[idx].nombre}?`)) return;
+  DIRECTORIO.splice(idx,1);
+  saveDirectorio();
+  renderDirectorio();
+  showToast('🗑 Estudiante eliminado');
+}
+
+function importarDirectorio(input){
+  const file=input.files[0];
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    showToast('⏳ Procesando PDF con IA…');
+    importarDirectorioPDF(file);
+  } else {
+    importarDirectorioExcel(file);
+  }
+  input.value='';
+}
+
+function importarDirectorioExcel(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      procesarFilasDirectorio(rows);
+    }catch(err){showToast('❌ Error al leer el archivo');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function procesarFilasDirectorio(rows){
+  let agregados=0, fusionados=0;
+  rows.forEach(row=>{
+    // Detectar columnas flexiblemente
+    const nombre=(row['NOMBRE']||row['Nombre']||row['NOMBRE COMPLETO']||row['nombre']||'').toString().trim().toUpperCase();
+    const correo=(row['CORREO']||row['Correo']||row['EMAIL']||row['Email']||row['correo']||row['email']||'').toString().trim().toLowerCase();
+    const programa=(row['PROGRAMA']||row['Programa']||row['programa']||'Presencial').toString().trim();
+    if(!nombre||!correo||!correo.includes('@')) return;
+    const existeCorreo=DIRECTORIO.findIndex(d=>d.correo===correo);
+    if(existeCorreo>=0){
+      // Mismo correo — fusionar si el nombre nuevo es más largo (más completo)
+      if(nombre.length>DIRECTORIO[existeCorreo].nombre.length){
+        DIRECTORIO[existeCorreo].nombre=nombre;
+        fusionados++;
+      }
+    } else {
+      DIRECTORIO.push({nombre,correo,programa:programa||'Presencial'});
+      agregados++;
+    }
+  });
+  saveDirectorio();
+  renderDirectorio();
+  showToast(`✅ ${agregados} agregados · ${fusionados} fusionados`);
+}
+
+async function importarDirectorioPDF(file){
+  try{
+    const base64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=rej;
+      r.readAsDataURL(file);
+    });
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+          {type:'text',text:'Extrae todos los estudiantes de este documento. Devuelve SOLO un JSON array con objetos {nombre, correo} en mayúsculas el nombre. Sin explicaciones ni markdown.'}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const txt=data.content?.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const arr=JSON.parse(txt);
+    procesarFilasDirectorio(arr.map(e=>({NOMBRE:e.nombre,CORREO:e.correo})));
+  }catch(err){showToast('❌ Error procesando PDF: '+err.message);}
 }
 
 // ── INIT ──
