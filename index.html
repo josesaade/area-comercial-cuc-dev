@@ -19,6 +19,9 @@
 <style>
 :root{color-scheme:dark;}
 :root{--bg:#0c0c10;--s1:#14141b;--s2:#1b1b25;--s3:#22222f;--bd:#2e2e40;--acc:#c8102e;--acc2:#ff2d4f;--gold:#f0a500;--grn:#00c97a;--blu:#3d8eff;--pur:#9b59ff;--red:#ff3355;--txt:#e6e6f0;--mut:#5e5e78;--wht:#ffffff}
+body.light{--bg:#f2f2f6;--s1:#ffffff;--s2:#e9e9f0;--s3:#dfdfe8;--bd:#c8c8d8;--txt:#18181e;--mut:#686880;color-scheme:light}
+body.light .srch::placeholder{color:var(--mut)}
+body.light input,body.light select,body.light textarea{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-height:100svh;font-size:14px;overflow-y:auto}
 .topbar{padding-left:max(24px, env(safe-area-inset-left));padding-right:max(24px, env(safe-area-inset-right))}
@@ -235,6 +238,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
 </style>
 </head>
 <body>
+<script>if(localStorage.getItem('ac_theme')==='light')document.body.classList.add('light');</script>
 
 <!-- ══ LOGIN ══ -->
 <div id="login">
@@ -276,17 +280,16 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         <button class="tab" onclick="sw('checklist')">✅ Checklist</button>
         <button class="tab" onclick="sw('importar')">📥 Importar</button>
         <button class="tab" onclick="sw('consultorio')">⚖️ Consultorio</button>
+        <button class="tab" onclick="sw('directorio')">👥 Directorio</button>
       </div>
     </div>
     <div class="tr">
       <div class="curbadge" id="cbadge"></div>
-      <button id="notas-btn" onclick="toggleNotas()" style="background:none;border:none;cursor:pointer;font-size:18px;position:relative;padding:4px" title="Notas del equipo">
-        🔔<span id="notas-badge" style="display:none;position:absolute;top:0;right:0;background:var(--acc);color:#fff;border-radius:50%;width:14px;height:14px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',sans-serif" id="notas-count"></span>
-      </button>
       <div title="Estado de sincronización" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mut)">
         <div id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#f0a500;transition:background .5s"></div>
         <span id="sync-txt">Conectando…</span>
       </div>
+      <button class="btnout" id="theme-toggle" onclick="toggleTheme()" title="Cambiar entre modo oscuro y claro" style="font-size:14px;padding:4px 9px">🌙</button>
       <button class="btnout" onclick="logout()">Salir</button>
     </div>
   </div>
@@ -333,7 +336,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div id="teams-review-list"></div>
     </div>
 
-    <div class="vc on" id="vc-casos">
+    <div class="vc" id="vc-casos">
       <div class="stats" id="stats"></div>
       <div class="frow">
         <input class="srch" id="srch" placeholder="Buscar radicado, usuario o estudiante…" oninput="studentFilter='';render()">
@@ -594,6 +597,17 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
           <canvas id="ch-tiempo" height="180"></canvas>
         </div>
       </div>
+      <!-- Charts row 3 -->
+      <div class="an-row2" style="margin-top:14px">
+        <div class="an-card" style="flex:1.2">
+          <div class="an-ctitle">Tasa de correcciones por tipo de caso</div>
+          <canvas id="ch-corr" height="200"></canvas>
+        </div>
+        <div class="an-card" style="flex:0.8">
+          <div class="an-ctitle" style="margin-bottom:10px">Correcciones por líder</div>
+          <div id="corr-lider-list" style="font-size:12px"></div>
+        </div>
+      </div>
       <!-- Finalizados table -->
       <div class="shdr" style="margin-top:22px">
         <div class="stitle">📋 Casos Finalizados</div>
@@ -612,11 +626,13 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         <div id="fin-list"></div>
       </div>
     </div>
-  </div>
-</div>
 
     <!-- ══ CONSULTORIO ══ -->
     <div class="vc" id="vc-consultorio" style="padding-top:0"></div>
+    <div class="vc" id="vc-directorio"></div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
 
 <!-- ══ MODAL ACCIÓN ══ -->
 <div class="overlay" id="mod-accion">
@@ -675,7 +691,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div id="cambios-box" style="margin-top:16px;display:none">
         <div style="height:1px;background:var(--bd);margin-bottom:16px"></div>
         <div class="msect">Cambiar datos del caso</div>
-        <div class="fgrid2">
+        <div class="fgrid2" id="cambios-fgrid">
           <div class="fg">
             <label class="fl">Cambiar tipo de solución</label>
             <select class="fsel" id="m-newsol"><option value="">— sin cambio —</option></select>
@@ -683,6 +699,23 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
           <div class="fg">
             <label class="fl">Cambiar líder asignado</label>
             <select class="fsel" id="m-newlid"><option value="">— sin cambio —</option></select>
+          </div>
+        </div>
+        <!-- Solo visible en reasignación -->
+        <div id="reasig-box" style="display:none;margin-top:4px">
+          <div style="height:1px;background:var(--bd);margin-bottom:14px"></div>
+          <div class="fg">
+            <label class="fl">🔄 Nuevo estudiante asignado *</label>
+            <div style="position:relative">
+              <input class="fi" id="m-new-est" placeholder="Escribe para buscar…" autocomplete="off"
+                oninput="buscarEstudiante(this.value,'reasig-est-list'); generarMsgReasig()"
+                onblur="setTimeout(()=>document.getElementById('reasig-est-list').style.display='none',200)">
+              <div id="reasig-est-list" style="display:none;position:absolute;z-index:999;background:var(--s2);border:1px solid var(--bd);border-radius:8px;max-height:200px;overflow-y:auto;width:100%;margin-top:2px"></div>
+            </div>
+          </div>
+          <div id="reasig-msg-box" style="display:none;margin-top:4px">
+            <div class="msect" style="margin-bottom:8px">Mensaje para el nuevo estudiante — pega en Teams</div>
+            <div class="probox vis" style="display:block"><button class="copybtn" onclick="copyReasigMsg()">Copiar</button><span id="reasig-protxt"></span></div>
           </div>
         </div>
       </div>
@@ -821,31 +854,6 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
   </div>
 </div>
 
-<!-- ══ PANEL DE NOTAS FLOTANTE ══ -->
-<div id="notas-panel" style="display:none;position:fixed;bottom:80px;right:24px;width:340px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;overflow:hidden">
-  <div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between">
-    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700">🔔 Notas del equipo</div>
-    <button onclick="toggleNotas()" style="background:none;border:none;color:var(--mut);cursor:pointer;font-size:16px">✕</button>
-  </div>
-  <div id="notas-list" style="max-height:300px;overflow-y:auto;padding:8px"></div>
-  <div style="padding:12px;border-top:1px solid var(--bd)">
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <select id="notas-dest" class="fsel" style="flex:1;font-size:11px;padding:5px 8px">
-        <option value="todos">📢 Para todos</option>
-        <option value="angie">→ Angie Mejia</option>
-        <option value="gabriela">→ Gabriela</option>
-        <option value="azhly">→ Azhly Padilla</option>
-        <option value="victor">→ Victor Polanco</option>
-        <option value="jose">→ Jose Saade</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:6px">
-      <input id="notas-input" class="fi" placeholder="Escribe una nota..." style="flex:1;font-size:12px;padding:7px 10px" onkeydown="if(event.key==='Enter')enviarNota()">
-      <button class="btnadd" onclick="enviarNota()" style="padding:7px 12px;font-size:12px">Enviar</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <!-- ══ MODAL EDITAR CASO ══ -->
@@ -859,8 +867,12 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div class="fgrid2">
         <div class="fg"><label class="fl">Usuario (cliente)</label><input class="fi" id="edit-usu" placeholder="Nombre completo"></div>
         <div class="fg"><label class="fl">Estudiante</label>
-          <input class="fi" id="edit-est" placeholder="Escribe para buscar..." autocomplete="off" oninput="buscarEstudiante(this.value,'edit-est-list')" onblur="setTimeout(()=>{const l=document.getElementById('edit-est-list');if(l)l.style.display='none'},200)">
-          <div id="edit-est-list" style="display:none;position:absolute;z-index:999;background:var(--s2);border:1px solid var(--bd);border-radius:8px;max-height:180px;overflow-y:auto;width:280px;margin-top:2px"></div>
+          <div style="position:relative">
+            <input class="fi" id="edit-est" placeholder="Escribe para buscar…" autocomplete="off"
+              oninput="buscarEstudiante(this.value,'edit-est-list')"
+              onblur="setTimeout(()=>document.getElementById('edit-est-list').style.display='none',200)">
+            <div id="edit-est-list" style="display:none;position:absolute;z-index:999;background:var(--s2);border:1px solid var(--bd);border-radius:8px;max-height:200px;overflow-y:auto;width:100%;margin-top:2px"></div>
+          </div>
         </div>
       </div>
       <div class="fgrid2" style="margin-top:12px">
@@ -873,6 +885,10 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
         </div>
       </div>
       <div class="fg" style="margin-top:12px"><label class="fl">Radicado</label><input class="fi" id="edit-rad-input" placeholder="SC-XXXXX"></div>
+      <div class="fg" style="margin-top:12px">
+        <label class="fl">Tipo de solución</label>
+        <select class="fsel" id="edit-sol"></select>
+      </div>
       <!-- Solo para finalizados -->
       <div id="edit-reactivar-box" style="display:none;margin-top:16px;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.25);border-radius:8px;padding:12px 14px">
         <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px">⚠️ Este caso está Finalizado</div>
@@ -883,6 +899,34 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
     <div class="mftr">
       <button class="btnsec" onclick="cm('mod-edit')">Cancelar</button>
       <button class="btnsave" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NUEVO/EDITAR ESTUDIANTE ══ -->
+<div class="overlay" id="mod-nuevo-est" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="mhdr">
+      <div class="mtitle" id="nest-title">Agregar estudiante</div>
+      <button class="mclose" onclick="document.getElementById('mod-nuevo-est').style.display='none'">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Nombre completo *</label>
+        <input class="fi" id="nest-nombre" placeholder="APELLIDO APELLIDO NOMBRE NOMBRE" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fg"><label class="fl">Correo institucional *</label>
+        <input class="fi" id="nest-correo" placeholder="usuario@cuc.edu.co" oninput="autoUsuario()"></div>
+      <div class="fg"><label class="fl">Usuario Emma <span style="color:var(--mut);font-size:10px">(se calcula del correo automáticamente)</span></label>
+        <input class="fi" id="nest-usuario" placeholder="ej: ypena13"></div>
+      <div class="fg"><label class="fl">Programa</label>
+        <select class="fsel" id="nest-prog">
+          <option value="Presencial">Presencial</option>
+          <option value="Virtual">Virtual</option>
+        </select>
+      </div>
+    </div>
+    <div class="mftr">
+      <button class="btnsec" onclick="document.getElementById('mod-nuevo-est').style.display='none'">Cancelar</button>
+      <button class="btnsave" onclick="guardarNuevoEst()">Guardar</button>
     </div>
   </div>
 </div>
@@ -912,107 +956,120 @@ const USERS=[
 ];
 
 // ── Directorio de estudiantes ──
-const DIRECTORIO=[
-  {nombre:'ALVAREZ PINZON FERNANDO DAVID',correo:'falvarez6@cuc.edu.co',usuario:'falvarez6'},
-  {nombre:'BARBAS AREVALO CAMILO ANDRES',correo:'cbarbas@cuc.edu.co',usuario:'cbarbas'},
-  {nombre:'BARRERA CAIROSA KEVIN JUNIOR',correo:'kbarrera2@cuc.edu.co',usuario:'kbarrera2'},
-  {nombre:'BARRIOS PEREZ ROSIMAR ANDREA',correo:'rbarrios19@cuc.edu.co',usuario:'rbarrios19'},
-  {nombre:'BOLAÑO DANIELS MARIANA',correo:'mbolano18@cuc.edu.co',usuario:'mbolano18'},
-  {nombre:'BUITRAGO MALAGON JEIMY TATIANA',correo:'jbuitrag2@cuc.edu.co',usuario:'jbuitrag2'},
-  {nombre:'CABARCAS CALLEJA YARLIS DANIELA',correo:'ycabarca10@cuc.edu.co',usuario:'ycabarca10'},
-  {nombre:'CALDERON PEREZ MARIA FERNANDA',correo:'mcaldero16@cuc.edu.co',usuario:'mcaldero16'},
-  {nombre:'CAMPO ALVAREZ LUIS MIGUEL',correo:'lcampo17@cuc.edu.co',usuario:'lcampo17'},
-  {nombre:'CARBONELL ARIAS DANIELA ALEJANDRA',correo:'dcarbone2@cuc.edu.co',usuario:'dcarbone2'},
-  {nombre:'CHARRY PEREZ MIGUEL ANGEL',correo:'mcharry1@cuc.edu.co',usuario:'mcharry1'},
-  {nombre:'CORONELL MOLINARES ANGELLY MARCELA',correo:'acoronel9@cuc.edu.co',usuario:'acoronel9'},
-  {nombre:'CORPUS BOWIE MAYRA ESTELA',correo:'mcorpus@cuc.edu.co',usuario:'mcorpus'},
-  {nombre:'CRESPO FANDINO ANGI PAOLA',correo:'acrespo4@cuc.edu.co',usuario:'acrespo4'},
-  {nombre:'DE LA HOZ VILLADIEGO OSNAIDER ALFREDO',correo:'odelahoz5@cuc.edu.co',usuario:'odelahoz5'},
-  {nombre:'DIAZ BENAVIDES BRAYAN ALFONSO',correo:'bdiaz26@cuc.edu.co',usuario:'bdiaz26'},
-  {nombre:'DIAZ PADILLA MARIA TERESA',correo:'mdiaz70@cuc.edu.co',usuario:'mdiaz70'},
-  {nombre:'DONADO BARRIOS GABRIELA',correo:'gdonado3@cuc.edu.co',usuario:'gdonado3'},
-  {nombre:'FERREIRA RONDANO YASSER ALFONSO',correo:'yferreri@cuc.edu.co',usuario:'yferreri'},
-  {nombre:'FLEREZ ISAZA PEDRO JOSE',correo:'pflerez@cuc.edu.co',usuario:'pflerez'},
-  {nombre:'FRANCO VELEZ JOSE CAMILO',correo:'jfranco19@cuc.edu.co',usuario:'jfranco19'},
-  {nombre:'GARCIA YANCI IVANA ANDREA',correo:'igarcia15@cuc.edu.co',usuario:'igarcia15'},
-  {nombre:'GUERRA MANJARRES DANIELA LUCIA',correo:'dguerra11@cuc.edu.co',usuario:'dguerra11'},
-  {nombre:'GUTIERREZ LARRARTE LUISA FERNANDA',correo:'lgutierr54@cuc.edu.co',usuario:'lgutierr54'},
-  {nombre:'HOYOS FERNANDEZ SOFIA CAROLINA',correo:'shoyos9@cuc.edu.co',usuario:'shoyos9'},
-  {nombre:'LIVINGSTON MITCHELL ANA SOFIA',correo:'alivings3@cuc.edu.co',usuario:'alivings3'},
-  {nombre:'LOZANO MARRERO RICARDO MARIO',correo:'rlozano5@cuc.edu.co',usuario:'rlozano5'},
-  {nombre:'MANOTAS PEÑA ORLANDO JOSE',correo:'omanotas@cuc.edu.co',usuario:'omanotas'},
-  {nombre:'MARTINEZ SAMUR RAFAEL ARMANDO',correo:'rmartine30@cuc.edu.co',usuario:'rmartine30'},
-  {nombre:'MCDOWELL BENT MERYANNE MAYGETH',correo:'mmcdowe@cuc.edu.co',usuario:'mmcdowe'},
-  {nombre:'MEJIA ALMARIO LAUREN DANIELA',correo:'lmejia30@cuc.edu.co',usuario:'lmejia30'},
-  {nombre:'MEJIA SALAZAR ANGIE VANESSA',correo:'amejia39@cuc.edu.co',usuario:'amejia39'},
-  {nombre:'NARVAEZ PAZ VALENTINA',correo:'vnarvaez@cuc.edu.co',usuario:'vnarvaez'},
-  {nombre:'NIEBLES GARCIA MARIANA',correo:'mniebles15@cuc.edu.co',usuario:'mniebles15'},
-  {nombre:'OSORIO NAVAS KELLYS JHOANA',correo:'kosorio9@cuc.edu.co',usuario:'kosorio9'},
-  {nombre:'PADILLA ROMO AZHLY DANIELA',correo:'apadilla38@cuc.edu.co',usuario:'apadilla38'},
-  {nombre:'PARRA CASTAÑEDA ALI JESUS',correo:'aparra16@cuc.edu.co',usuario:'aparra16'},
-  {nombre:'PEÑA DE LA HOZ YERLIN CAROLINA',correo:'ypena13@cuc.edu.co',usuario:'ypena13'},
-  {nombre:'PIMIENTA SALAZAR SILVANA',correo:'spimient5@cuc.edu.co',usuario:'spimient5'},
-  {nombre:'POLANCO CERPA VICTOR ANDRES',correo:'vpolanco@cuc.edu.co',usuario:'vpolanco'},
-  {nombre:'RACEDO CAICEDO WILSON RAFAEL',correo:'wracedo@cuc.edu.co',usuario:'wracedo'},
-  {nombre:'RACEDO REDONDO HELEN STEFANY',correo:'hracedo1@cuc.edu.co',usuario:'hracedo1'},
-  {nombre:'REYES ARAUJO CARLOS ANDRES',correo:'creyes13@cuc.edu.co',usuario:'creyes13'},
-  {nombre:'RINCONES LAGUNA JUAN CAMILO',correo:'jrincone@cuc.edu.co',usuario:'jrincone'},
-  {nombre:'ROMERO FIGUEROA NICOLL DEL CARMEN',correo:'nromero12@cuc.edu.co',usuario:'nromero12'},
-  {nombre:'SANTANA BILBAO MARTHA LUZ',correo:'msantana6@cuc.edu.co',usuario:'msantana6'},
-  {nombre:'VALDEBLANQUEZ ARREGOCES SHARON KEILETH',correo:'svaldebl@cuc.edu.co',usuario:'svaldebl'},
-  {nombre:'CANAS PENA RUBEN DE JESUS',correo:'rcanas1@cuc.edu.co',usuario:'rcanas1'},
-  {nombre:'HERNANDEZ RODRIGUEZ MICHELL CAROLINA',correo:'mhernand99@cuc.edu.co',usuario:'mhernand99'},
-  {nombre:'MAESTRE LOPEZ TEYJANA CHIQUINQUIRA',correo:'tmaestre1@cuc.edu.co',usuario:'tmaestre1'},
-  {nombre:'MARTINEZ CUSSA WALTER DE JESUS',correo:'wmartine5@cuc.edu.co',usuario:'wmartine5'},
-  {nombre:'MATTA SUAREZ DANNA PAOLA',correo:'dmatta@cuc.edu.co',usuario:'dmatta'},
-  {nombre:'MENDOZA NAVARRO JOANNA VANESSA',correo:'jmendoza91@cuc.edu.co',usuario:'jmendoza91'},
-  {nombre:'MERCADO SANTIAGO GRACE CRISTINA',correo:'gmercado16@cuc.edu.co',usuario:'gmercado16'},
-  {nombre:'MORON AMOROCHO DANIELA SOFIA',correo:'dmoron2@cuc.edu.co',usuario:'dmoron2'},
-  {nombre:'ORTEGA GALVIS KATHERIN ESTHER',correo:'kortega12@cuc.edu.co',usuario:'kortega12'},
-  {nombre:'PALACIO SIOSI ELIAS SANTANDER',correo:'epalacio@cuc.edu.co',usuario:'epalacio'},
-  {nombre:'PEÑA MARTINEZ LUISA FERNANDA',correo:'lpena30@cuc.edu.co',usuario:'lpena30'},
-  {nombre:'PEÑA OJEDA SAMUEL DAVID',correo:'spena15@cuc.edu.co',usuario:'spena15'},
-  {nombre:'PINA CONTRERAS JOSE JORGE',correo:'jpina@cuc.edu.co',usuario:'jpina'},
-  {nombre:'POLO HERNANDEZ IVAN ANDRES',correo:'ipolo13@cuc.edu.co',usuario:'ipolo13'},
-  {nombre:'RADA PABON MARIA FELICIDAD',correo:'mrada7@cuc.edu.co',usuario:'mrada7'},
-  {nombre:'RINCON JARAMILLO MARIA FERNANDA',correo:'mrincon9@cuc.edu.co',usuario:'mrincon9'},
-  {nombre:'ROSALES LOPEZ OSCAR CAMILO',correo:'orosales@cuc.edu.co',usuario:'orosales'},
-  {nombre:'TAFUR PEREZ SARA JUDITH',correo:'stafur@cuc.edu.co',usuario:'stafur'},
-  {nombre:'AGUIRRE PEREZ DAVID',correo:'daguirre10@cuc.edu.co',usuario:'daguirre10'},
-  {nombre:'CENTENO CADENA OSWALDO',correo:'ocenteno@cuc.edu.co',usuario:'ocenteno'},
-  {nombre:'DE LA OSSA RADA LUIS FERNANDO',correo:'ldelaoss@cuc.edu.co',usuario:'ldelaoss'},
-  {nombre:'DIAZ EPIAYU NEIL',correo:'ndiaz35@cuc.edu.co',usuario:'ndiaz35'},
-  {nombre:'IBAÑEZ ECHEVERRY MAYRA',correo:'mibane2@cuc.edu.co',usuario:'mibane2'},
-  {nombre:'LASTRA DOMINGUEZ ANDREA',correo:'alastra4@cuc.edu.co',usuario:'alastra4'},
-  {nombre:'MARTINEZ ALVAREZ LEANDRA',correo:'lmartine40@cuc.edu.co',usuario:'lmartine40'},
-  {nombre:'MEDERO COTES JORGE',correo:'jmedero@cuc.edu.co',usuario:'jmedero'},
-  {nombre:'MERCADO INSIGNARES GABRIEL',correo:'gmercado13@cuc.edu.co',usuario:'gmercado13'},
-  {nombre:'PAEZ BARROS ELIAS',correo:'epaez3@cuc.edu.co',usuario:'epaez3'},
-  {nombre:'PERTUZ HERNANDEZ KAROL',correo:'kpertuz@cuc.edu.co',usuario:'kpertuz'},
-  {nombre:'RUA ARENAS ANGELL',correo:'arua3@cuc.edu.co',usuario:'arua3'},
-  {nombre:'HERNANDEZ SANTIAGO DANIEL',correo:'dhernand46@cuc.edu.co',usuario:'dhernand46'},
-  {nombre:'LARA CANTILLO KAREN',correo:'klara4@cuc.edu.co',usuario:'klara4'},
-  {nombre:'HORTA BELTRAN LAURA',correo:'lhorta2@cuc.edu.co',usuario:'lhorta2'},
-  {nombre:'NAVAS OSORIO KELLYS',correo:'kosorio9@cuc.edu.co',usuario:'navas'},
+// usuario = parte del correo antes del @, se calcula automáticamente si no se especifica
+function _u(correo){return correo.split('@')[0];}
+let DIRECTORIO=[
+  {nombre:'ALVAREZ PINZON FERNANDO DAVID',correo:'falvarez6@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARBAS AREVALO CAMILO ANDRES',correo:'cbarbas@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARRERA CAIROSA KEVIN JUNIOR',correo:'kbarrera2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BARRIOS PEREZ ROSIMAR ANDREA',correo:'rbarrios19@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BOLAÑO DANIELS MARIANA',correo:'mbolano18@cuc.edu.co',programa:'Presencial'},
+  {nombre:'BUITRAGO MALAGON JEIMY TATIANA',correo:'jbuitrag2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CABARCAS CALLEJA YARLIS DANIELA',correo:'ycabarca10@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CALDERON PEREZ MARIA FERNANDA',correo:'mcaldero16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CAMPO ALVAREZ LUIS MIGUEL',correo:'lcampo17@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CARBONELL ARIAS DANIELA ALEJANDRA',correo:'dcarbone2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CHARRY PEREZ MIGUEL ANGEL',correo:'mcharry1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CORONELL MOLINARES ANGELLY MARCELA',correo:'acoronel9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CORPUS BOWIE MAYRA ESTELA',correo:'mcorpus@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CRESPO FANDINO ANGI PAOLA',correo:'acrespo4@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DE LA HOZ VILLADIEGO OSNAIDER ALFREDO',correo:'odelahoz5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DIAZ BENAVIDES BRAYAN ALFONSO',correo:'bdiaz26@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DIAZ PADILLA MARIA TERESA',correo:'mdiaz70@cuc.edu.co',programa:'Presencial'},
+  {nombre:'DONADO BARRIOS GABRIELA',correo:'gdonado3@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FERREIRA RONDANO YASSER ALFONSO',correo:'yferreri@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FLEREZ ISAZA PEDRO JOSE',correo:'pflerez@cuc.edu.co',programa:'Presencial'},
+  {nombre:'FRANCO VELEZ JOSE CAMILO',correo:'jfranco19@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GARCIA YANCI IVANA ANDREA',correo:'igarcia15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GUERRA MANJARRES DANIELA LUCIA',correo:'dguerra11@cuc.edu.co',programa:'Presencial'},
+  {nombre:'GUTIERREZ LARRARTE LUISA FERNANDA',correo:'lgutierr54@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HOYOS FERNANDEZ SOFIA CAROLINA',correo:'shoyos9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LIVINGSTON MITCHELL ANA SOFIA',correo:'alivings3@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LOZANO MARRERO RICARDO MARIO',correo:'rlozano5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MANOTAS PEÑA ORLANDO JOSE',correo:'omanotas@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MARTINEZ SAMUR RAFAEL ARMANDO',correo:'rmartine30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MCDOWELL BENT MERYANNE MAYGETH',correo:'mmcdowe@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MEJIA ALMARIO LAUREN DANIELA',correo:'lmejia30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MEJIA SALAZAR ANGIE VANESSA',correo:'amejia39@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NARVAEZ PAZ VALENTINA',correo:'vnarvaez@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NIEBLES GARCIA MARIANA',correo:'mniebles15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'OSORIO NAVAS KELLYS JHOANA',correo:'kosorio9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PADILLA ROMO AZHLY DANIELA',correo:'apadilla38@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PARRA CASTAÑEDA ALI JESUS',correo:'aparra16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA DE LA HOZ YERLIN CAROLINA',correo:'ypena13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PIMIENTA SALAZAR SILVANA',correo:'spimient5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'POLANCO CERPA VICTOR ANDRES',correo:'vpolanco@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RACEDO CAICEDO WILSON RAFAEL',correo:'wracedo@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RACEDO REDONDO HELEN STEFANY',correo:'hracedo1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'REYES ARAUJO CARLOS ANDRES',correo:'creyes13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RINCONES LAGUNA JUAN CAMILO',correo:'jrincone@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ROMERO FIGUEROA NICOLL DEL CARMEN',correo:'nromero12@cuc.edu.co',programa:'Presencial'},
+  {nombre:'SANTANA BILBAO MARTHA LUZ',correo:'msantana6@cuc.edu.co',programa:'Presencial'},
+  {nombre:'VALDEBLANQUEZ ARREGOCES SHARON KEILETH',correo:'svaldebl@cuc.edu.co',programa:'Presencial'},
+  {nombre:'CANAS PENA RUBEN DE JESUS',correo:'rcanas1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HERNANDEZ RODRIGUEZ MICHELL CAROLINA',correo:'mhernand99@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MAESTRE LOPEZ TEYJANA CHIQUINQUIRA',correo:'tmaestre1@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MARTINEZ CUSSA WALTER DE JESUS',correo:'wmartine5@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MATTA SUAREZ DANNA PAOLA',correo:'dmatta@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MENDOZA NAVARRO JOANNA VANESSA',correo:'jmendoza91@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MERCADO SANTIAGO GRACE CRISTINA',correo:'gmercado16@cuc.edu.co',programa:'Presencial'},
+  {nombre:'MORON AMOROCHO DANIELA SOFIA',correo:'dmoron2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ORTEGA GALVIS KATHERIN ESTHER',correo:'kortega12@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PALACIO SIOSI ELIAS SANTANDER',correo:'epalacio@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA MARTINEZ LUISA FERNANDA',correo:'lpena30@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PEÑA OJEDA SAMUEL DAVID',correo:'spena15@cuc.edu.co',programa:'Presencial'},
+  {nombre:'PINA CONTRERAS JOSE JORGE',correo:'jpina@cuc.edu.co',programa:'Presencial'},
+  {nombre:'POLO HERNANDEZ IVAN ANDRES',correo:'ipolo13@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RADA PABON MARIA FELICIDAD',correo:'mrada7@cuc.edu.co',programa:'Presencial'},
+  {nombre:'RINCON JARAMILLO MARIA FERNANDA',correo:'mrincon9@cuc.edu.co',programa:'Presencial'},
+  {nombre:'ROSALES LOPEZ OSCAR CAMILO',correo:'orosales@cuc.edu.co',programa:'Presencial'},
+  {nombre:'TAFUR PEREZ SARA JUDITH',correo:'stafur@cuc.edu.co',programa:'Presencial'},
+  {nombre:'AGUIRRE PEREZ DAVID',correo:'daguirre10@cuc.edu.co',programa:'Virtual'},
+  {nombre:'CENTENO CADENA OSWALDO',correo:'ocenteno@cuc.edu.co',programa:'Virtual'},
+  {nombre:'DE LA OSSA RADA LUIS FERNANDO',correo:'ldelaoss@cuc.edu.co',programa:'Virtual'},
+  {nombre:'DIAZ EPIAYU NEIL',correo:'ndiaz35@cuc.edu.co',programa:'Virtual'},
+  {nombre:'IBAÑEZ ECHEVERRY MAYRA',correo:'mibane2@cuc.edu.co',programa:'Virtual'},
+  {nombre:'LASTRA DOMINGUEZ ANDREA',correo:'alastra4@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MARTINEZ ALVAREZ LEANDRA',correo:'lmartine40@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MEDERO COTES JORGE',correo:'jmedero@cuc.edu.co',programa:'Virtual'},
+  {nombre:'MERCADO INSIGNARES GABRIEL',correo:'gmercado13@cuc.edu.co',programa:'Virtual'},
+  {nombre:'PAEZ BARROS ELIAS',correo:'epaez3@cuc.edu.co',programa:'Virtual'},
+  {nombre:'PERTUZ HERNANDEZ KAROL',correo:'kpertuz@cuc.edu.co',programa:'Virtual'},
+  {nombre:'RUA ARENAS ANGELL',correo:'arua3@cuc.edu.co',programa:'Virtual'},
+  {nombre:'HERNANDEZ SANTIAGO DANIEL',correo:'dhernand46@cuc.edu.co',programa:'Presencial'},
+  {nombre:'LARA CANTILLO KAREN',correo:'klara4@cuc.edu.co',programa:'Presencial'},
+  {nombre:'HORTA BELTRAN LAURA',correo:'lhorta2@cuc.edu.co',programa:'Presencial'},
+  {nombre:'NAVAS OSORIO KELLYS',correo:'kosorio9@cuc.edu.co',programa:'Presencial'},
 ];
+// Cargar ediciones guardadas en localStorage
+(function(){try{const saved=localStorage.getItem('ac_directorio_v1');if(saved)DIRECTORIO=JSON.parse(saved);}catch(e){}})();
 
 function getCorreoEstudiante(nombre){
   if(!nombre) return null;
   const n=nombre.toUpperCase().trim();
-  // Buscar por nombre exacto
-  let match=DIRECTORIO.find(d=>d.nombre===n);
+  const match=DIRECTORIO.find(d=>d.nombre===n||n.includes(d.nombre.split(' ')[0]+'  '+d.nombre.split(' ')[1]));
   if(match) return match.correo;
-  // Buscar por usuario (si viene del Excel de Emma)
-  match=DIRECTORIO.find(d=>d.usuario===nombre.toLowerCase().trim());
-  if(match) return match.correo;
-  // Búsqueda parcial
   const palabras=n.split(' ');
-  return DIRECTORIO.find(d=>palabras.filter(p=>p.length>3).every(p=>d.nombre.includes(p)))?.correo||null;
+  return DIRECTORIO.find(d=>palabras.some(p=>p.length>3&&d.nombre.includes(p)))?.correo||null;
 }
 
-function getEstudianteByUsuario(usu){
-  if(!usu) return null;
-  return DIRECTORIO.find(d=>d.usuario===usu.toLowerCase().trim())||null;
+// Busca estudiante por nombre de usuario (ej: ypena13 → YERLIN PEÑA)
+function getEstudianteByUsuario(usuario){
+  if(!usuario) return null;
+  const u=usuario.toLowerCase().trim();
+  return DIRECTORIO.find(d=>{
+    const uDir=(d.usuario||_u(d.correo)).toLowerCase();
+    return uDir===u;
+  })||null;
+}
+
+// Obtiene el usuario de un estudiante del directorio
+function getUsuarioEstudiante(nombre){
+  if(!nombre) return null;
+  const n=nombre.toUpperCase().trim();
+  const d=DIRECTORIO.find(e=>e.nombre===n)||DIRECTORIO.find(e=>e.nombre.includes(n.split(' ')[0])&&e.nombre.includes(n.split(' ')[1]||''));
+  if(!d) return null;
+  return d.usuario||_u(d.correo);
 }
 
 function teamsLink(correo){
@@ -1166,6 +1223,21 @@ Saludos cordiales,
 JOSE SAADE
 Área Comercial`,
 
+  reasignacion_nuevo:(r,n)=>
+`Buenos días, estimado(a) ${n}:
+
+Le informamos que el radicado ${r} ha sido reasignado a usted para su gestión. El caso anterior no registró avances por parte del estudiante responsable, por lo que a partir de hoy usted asume la continuidad del mismo.
+
+Le solicitamos que ingrese a la plataforma Emma, donde encontrará los documentos y el historial del caso. Por favor revise el expediente completo y comuníquese con el Área Comercial para recibir orientación sobre los pasos a seguir.
+
+Es importante que inicie la gestión a la brevedad posible, ya que el caso requiere atención oportuna.
+
+Quedamos atentos a cualquier inquietud.
+
+Saludos cordiales,
+JOSE SAADE
+Área Comercial`,
+
   info_usu_1:(r,n)=>
 `Buenas tardes, estimado(a) ${n}:
 
@@ -1313,7 +1385,8 @@ function initCases(){
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
-let cu=null, selLogin=null, filter='todos', caseId=null, selAcc=null, hist=[];
+let cu=null, selLogin=null, filter='todos', caseId=null, selAcc=null, hist=[], studentFilter='';
+const localSaved=new Map(); // caseId → timestamp de última escritura local
 
 // ══════════════════════════════════════════
 //  SUPABASE
@@ -1331,13 +1404,21 @@ async function loadC(){
     clearTimeout(timeout);
     if(error){console.error('loadC error:',error);return[];}
     if(!data||data.length===0) return[];
-    return data.map(r=>({
-      id:r.id, estudiante:r.estudiante||'', lider:r.lider||'', solucion:r.solucion||'',
-      subestado:r.subestado||'Esperando notificación por Teams', fecha:r.fecha||'',
-      periodo:r.periodo||'2026-1', correcciones:r.correcciones||0,
-      fechaUltimaAccion:r.fecha_ultima_accion||r.fecha||'',
-      estado:r.estado||'ASIGNADA', usuario:r.usuario||''
-    }));
+    return data.map(r=>{
+      let estudiante=r.estudiante||'';
+      // Si el estudiante parece un username (sin espacios o con @), buscar en directorio
+      if(estudiante&&(!estudiante.includes(' ')||estudiante.includes('@'))){
+        const match=getEstudianteByUsuario(estudiante.replace('@cuc.edu.co',''));
+        if(match) estudiante=match.nombre;
+      }
+      return {
+        id:r.id, estudiante, lider:r.lider||'', solucion:r.solucion||'',
+        subestado:r.subestado||'Esperando notificación por Teams', fecha:r.fecha||'',
+        periodo:r.periodo||'2026-1', correcciones:r.correcciones||0,
+        fechaUltimaAccion:r.fecha_ultima_accion||r.fecha||'',
+        estado:r.estado||'ASIGNADA', usuario:r.usuario||''
+      };
+    });
   }catch(e){
     console.error('loadC exception:',e);
     return[];
@@ -1348,6 +1429,7 @@ async function loadC(){
 async function saveC(caseIdToSave){
   const c=cases.find(x=>x.id===caseIdToSave);
   if(!c) return;
+  localSaved.set(caseIdToSave, Date.now()); // proteger contra sync durante 15s
   const{error}=await sb.from('casos').upsert({
     id:c.id, estudiante:c.estudiante, lider:c.lider||null, solucion:c.solucion,
     subestado:c.subestado, fecha:c.fecha, periodo:c.periodo||'2026-1',
@@ -1522,11 +1604,15 @@ async function doLogin(){
   try{ hist=await loadH(); if(hist.length>0) lastHistId=hist[0].id||0; }catch(e){hist=[];}
   try{ compromisos=await loadCompromisosDB(); }catch(e){compromisos=[];}
   try{ await loadChecklists(); }catch(e){}
-  try{ await loadNotas(); }catch(e){}
 
   renderAll();
   checkAlerts();
   renderLogin();
+  syncThemeBtn();
+  // Mostrar botón de notas
+  const nb=document.getElementById('notas-btn');
+  if(nb) nb.style.display='flex';
+  actualizarBadge();
   startRealtime();
   setTimeout(()=>{
     const txt=document.getElementById('sync-txt');
@@ -1573,7 +1659,7 @@ function sw(name){
   document.querySelectorAll('.vc').forEach(v=>v.classList.remove('on'));
   document.getElementById('vc-'+name).classList.add('on');
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',
-    ['casos','todos','kanban','eisenhower','dashboard','historial','analitica','compromisos','checklist','importar','consultorio'][i]===name));
+    ['casos','todos','kanban','eisenhower','dashboard','historial','analitica','compromisos','checklist','importar','consultorio','directorio'][i]===name));
   if(name==='todos') renderTodos();
   if(name==='kanban') renderKanban();
   if(name==='eisenhower') renderEisenhower();
@@ -1582,6 +1668,7 @@ function sw(name){
   if(name==='analitica') renderAnalitica();
   if(name==='checklist') renderChecklist();
   if(name==='consultorio') renderConsultorio();
+  if(name==='directorio') renderDirectorio();
   if(name==='compromisos'){loadCompromisosDB().then(d=>{compromisos=d;renderCompromisos();});}
 }
 
@@ -1862,8 +1949,12 @@ function renderTeamsReview(){
           </div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:500">${c.estudiante}</div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:500">${c.estudiante}</span>
+            ${c.estudianteAnterior?`<span style="font-size:9px;background:rgba(155,89,255,.15);color:var(--pur);border:1px solid rgba(155,89,255,.3);border-radius:4px;padding:1px 5px;white-space:nowrap" title="Antes: ${c.estudianteAnterior}">🔄 Reasignado</span>`:''}
+          </div>
           <div style="font-size:10px;color:var(--mut)">${c.usuario||'—'}</div>
+          ${c.estudianteAnterior?`<div style="font-size:9px;color:var(--mut);margin-top:1px">ant: ${c.estudianteAnterior.split(' ').slice(0,2).join(' ')}</div>`:''}
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:${d>=10?'var(--red)':d>=4?'var(--gold)':'var(--mut)'};margin-top:2px">${d}d</div>
         </div>
         <div><span class="tr-badge" style="background:${sc.bg};color:${sc.col};font-size:9px">${c.subestado.length>25?c.subestado.slice(0,23)+'…':c.subestado}</span></div>
@@ -1931,14 +2022,42 @@ async function loadEmmaAlerts(){
       return;
     }
     document.getElementById('emma-alerts-login').style.display='block';
-    document.getElementById('emma-alerts-list').innerHTML=data.map(a=>`
+    const ahora=new Date();
+    document.getElementById('emma-alerts-list').innerHTML=data.map(a=>{
+      // Calcular horas transcurridas desde la fecha de la alerta
+      const fechaAlerta=new Date(a.fecha+'T00:00:00');
+      const horasTranscurridas=Math.floor((ahora-fechaAlerta)/3600000);
+      const puedeDescartar=horasTranscurridas>=24;
+      const contadorHtml=puedeDescartar
+        ? `<span style="font-size:10px;color:var(--mut);background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:2px 8px">${horasTranscurridas}h</span>`
+        : `<span style="font-size:10px;color:var(--gold);background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.25);border-radius:10px;padding:2px 8px" title="Disponible para descartar a las 24h">⏱ ${horasTranscurridas}h</span>`;
+      const descartarBtn=puedeDescartar
+        ? `<button class="emma-alert-btn" style="background:transparent;border:1px solid var(--bd);color:var(--mut);margin-right:6px" onclick="descartarEmmaAlert('${a.id}')" title="Han pasado más de 24h — puedes descartarlo">✕ Descartar</button>`
+        : '';
+      return `
       <div class="emma-alert-card">
-        <div>
-          <div class="emma-alert-date">📅 ${a.fecha}</div>
-          <div class="emma-alert-label">Caso nuevo en Emma — sin radicado</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div>
+            <div class="emma-alert-date">📅 ${a.fecha}</div>
+            <div class="emma-alert-label">Caso nuevo en Emma — sin radicado</div>
+          </div>
+          ${contadorHtml}
         </div>
-        <button class="emma-alert-btn" onclick="doLoginYRegistrar('${a.id}')">+ Registrar caso</button>
-      </div>`).join('');
+        <div style="display:flex;align-items:center;gap:0">
+          ${descartarBtn}
+          <button class="emma-alert-btn" onclick="doLoginYRegistrar('${a.id}')">+ Registrar caso</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){}
+}
+
+async function descartarEmmaAlert(id){
+  if(!confirm('¿Descartar esta alerta de Emma? Se marcará como documentada sin registrar caso.')) return;
+  try{
+    await sb.from('emma_alerts').update({documentado:true}).eq('id',id);
+    loadEmmaAlerts();
+    showToast('🗑 Alerta descartada');
   }catch(e){}
 }
 
@@ -2084,16 +2203,32 @@ function buscarEstudiante(q, listId){
 }
 
 function selEstudiante(nombre, correo, listId){
-  // Determinar si es el modal de agregar o de editar
   if(listId==='a-est-list'){
     document.getElementById('a-est').value=nombre;
-    // Guardar correo en data attribute
     document.getElementById('a-est').dataset.correo=correo;
+  } else if(listId==='reasig-est-list'){
+    document.getElementById('m-new-est').value=nombre;
+    document.getElementById('m-new-est').dataset.correo=correo;
+    generarMsgReasig();
+  } else if(listId==='edit-est-list'){
+    document.getElementById('edit-est').value=nombre;
   } else {
     document.getElementById('edit-est').value=nombre;
     document.getElementById('edit-est').dataset.correo=correo;
   }
   document.getElementById(listId).style.display='none';
+}
+
+function generarMsgReasig(){
+  const nombre=document.getElementById('m-new-est').value.trim();
+  const msgBox=document.getElementById('reasig-msg-box');
+  if(nombre.length>3){
+    const primerNombre=nombre.split(' ').slice(0,2).join(' ');
+    document.getElementById('reasig-protxt').textContent=PROFORMAS.reasignacion_nuevo(caseId,primerNombre);
+    msgBox.style.display='block';
+  } else {
+    msgBox.style.display='none';
+  }
 }
 let importRows=[];
 
@@ -2131,15 +2266,12 @@ function procesarExcelEmma(file){
         .map(r=>{
           const rad=(r['Radicado']||'').replace('Radicado ','').trim();
           const usuario=(r['Nombre del solicitante']||'').trim().toUpperCase();
-          const usuarioEmma=(r['Usuario asignado']||r['Estudiante asignado']||'').trim();
-          // Resolver usuario Emma → nombre completo del directorio
-          const dirEntry=getEstudianteByUsuario(usuarioEmma);
-          const estudiante=dirEntry?dirEntry.nombre:(usuarioEmma.toUpperCase()||'');
+          const estudiante=(r['Usuario asignado']||r['Estudiante asignado']||'').trim();
           const fecha=(r['Fecha de registro']||'').toString().split('T')[0].split(' ')[0];
           const estadoEmma=(r['Estado']||'').trim();
           // Centro Conciliación cuenta como Finalizado
           const esFinalizado=ESTADOS_FINALIZADO_EMMA.has(estadoEmma);
-          return{rad,usuario,estudiante,usuarioEmma,fecha,estadoEmma,esFinalizado,solucion:'Por definir'};
+          return{rad,usuario,estudiante,fecha,estadoEmma,esFinalizado,solucion:'Por definir'};
         })
         .filter(r=>r.rad.startsWith('SC-'));
 
@@ -2277,8 +2409,11 @@ async function importarSeleccionados(){
     } else {
       // v2 y v3: agregar como nuevo
       const subestado=r.tipo==='v2'?'Finalizado':'Esperando notificación por Teams';
+      // Intentar resolver nombre completo desde directorio
+      const dirMatch=getEstudianteByUsuario(r.usuario);
+      const nombreEst=dirMatch?dirMatch.nombre:(r.estudiante||r.usuario);
       const nuevoCase={
-        id:r.rad, usuario:r.usuario, estudiante:r.estudiante||r.usuario,
+        id:r.rad, usuario:r.usuario, estudiante:nombreEst,
         lider:'', solucion:r.solucion||'Por definir', subestado,
         fecha:r.fecha, periodo:'2026-1', correcciones:0,
         fechaUltimaAccion:r.fecha, estado:'ASIGNADA'
@@ -2286,7 +2421,7 @@ async function importarSeleccionados(){
       cases.push(nuevoCase);
       await saveC(r.rad);
       hist.unshift({ts:new Date().toISOString(),user:cu.name,caseId:r.rad,
-        estudiante:r.usuario,accion:'Importado desde Emma',subestado});
+        estudiante:nombreEst,accion:'Importado desde Emma'+(dirMatch?' — nombre resuelto desde directorio':''),subestado});
       agregados++;
     }
   }
@@ -2334,6 +2469,8 @@ function openEdit(id){
   document.getElementById('edit-per').value=c.periodo||'2026-1';
   document.getElementById('edit-fecha').value=c.fecha||'';
   document.getElementById('edit-rad-input').value=c.id||'';
+  const solSel=document.getElementById('edit-sol');
+  solSel.innerHTML=SOLUCIONES.map(s=>`<option value="${s}"${s===c.solucion?' selected':''}>${s}</option>`).join('');
   // Mostrar opción de reactivar si está finalizado
   document.getElementById('edit-reactivar-box').style.display=
     c.subestado==='Finalizado'?'block':'none';
@@ -2348,6 +2485,7 @@ async function saveEdit(){
   c.estudiante=document.getElementById('edit-est').value.trim().toUpperCase();
   c.periodo=document.getElementById('edit-per').value;
   c.fecha=document.getElementById('edit-fecha').value;
+  c.solucion=document.getElementById('edit-sol').value||c.solucion;
   // Si cambió el radicado
   if(nuevoRad&&nuevoRad!==editId){
     // Cambiar ID: eliminar viejo, insertar nuevo
@@ -2788,13 +2926,15 @@ function render(){
 function openAcc(id){
   caseId=id;selAcc=null;
   const c=cases.find(x=>x.id===id);
-  document.getElementById('m-title').textContent=c.estudiante;
+  document.getElementById('m-title').innerHTML=c.estudiante
+    +(c.estudianteAnterior?` <span style="font-size:11px;background:rgba(155,89,255,.15);color:var(--pur);border:1px solid rgba(155,89,255,.3);border-radius:5px;padding:2px 7px;vertical-align:middle">🔄 Reasignado</span>`:'');
   document.getElementById('m-rad').textContent=c.id+' · '+(c.solucion||'Sin tipo')+' · Ingreso: '+c.fecha;
   const correoEst=getCorreoEstudiante(c.estudiante);
   const teamsBtn=correoEst?`<a href="${teamsLink(correoEst)}" target="_blank" style="font-size:11px;color:var(--blu);text-decoration:none;padding:3px 8px;border:1px solid var(--blu);border-radius:6px;margin-left:8px">💬 Abrir Teams</a>`:'';
   document.getElementById('m-info').innerHTML=
     'Líder: '+(c.lider?gu(c.lider).name:'Sin asignar')+
-    ' · '+dias(c.fecha)+'d en el sistema · '+diasUA(c)+'d sin actividad · Correcciones: '+c.correcciones+teamsBtn;
+    ' · '+dias(c.fecha)+'d en el sistema · '+diasUA(c)+'d sin actividad · Correcciones: '+c.correcciones+teamsBtn
+    +(c.estudianteAnterior?`<br><span style="font-size:10px;color:var(--pur)">Anterior: ${c.estudianteAnterior}</span>`:'');
   document.getElementById('probox').classList.remove('vis');
   document.getElementById('pro-lbl').style.display='none';
   document.getElementById('savebtn').disabled=true;
@@ -2803,6 +2943,11 @@ function openAcc(id){
   document.getElementById('corr-txt').value='';
   document.getElementById('notif-sol-box').style.display='none';
   document.getElementById('notif-sol').value='';
+  document.getElementById('reasig-box').style.display='none';
+  document.getElementById('m-new-est').value='';
+  document.getElementById('reasig-msg-box').style.display='none';
+  document.getElementById('reasig-est-list').style.display='none';
+  document.getElementById('cambios-fgrid').style.display='';
   document.getElementById('copybtn').textContent='Copiar';
   document.getElementById('copybtn').classList.remove('done');
 
@@ -2863,6 +3008,9 @@ function openAcc(id){
     relevant=ACCIONES.filter(a=>['respondio','cargue_emma'].includes(a.id));
   else if(c.subestado.includes('Aprobado'))
     relevant=ACCIONES.filter(a=>['docs_cargados','cargue_emma'].includes(a.id));
+  else if(c.subestado==='Se reasignará')
+    relevant=ACCIONES.filter(a=>['respondio','sin_resp_1','reasignar'].includes(a.id))
+      .map(a=>a.id==='respondio'?{...a,label:'✅ Nuevo estudiante notificado — activar caso',icon:'✅'}:a);
 
   document.getElementById('mopts').innerHTML=relevant.map(a=>
     `<div class="opt" onclick="selAccion('${a.id}')" id="opt-${a.id}" style="border-color:${a.color}20">
@@ -2894,15 +3042,28 @@ function selAccion(id){
   // Caja de correcciones para revision_done
   const corrBox=document.getElementById('corr-box');
   const notifBox=document.getElementById('notif-sol-box');
+  const reasigBox=document.getElementById('reasig-box');
   if(id==='revision_done'){
     corrBox.style.display='block';
     notifBox.style.display='none';
+    reasigBox.style.display='none';
   } else if(id==='respondio'&&c.subestado==='Esperando notificación por Teams'){
     notifBox.style.display='block';
     corrBox.style.display='none';
+    reasigBox.style.display='none';
+  } else if(id==='reasignar'){
+    reasigBox.style.display='block';
+    corrBox.style.display='none';
+    notifBox.style.display='none';
+    document.getElementById('cambios-fgrid').style.display='none';
+    // Generar mensaje al nuevo estudiante cuando escriban el nombre
+    const inp=document.getElementById('m-new-est');
+    inp.oninput=()=>generarMsgReasig();
   } else {
     corrBox.style.display='none';
     notifBox.style.display='none';
+    reasigBox.style.display='none';
+    document.getElementById('cambios-fgrid').style.display='';
   }
 
   // Proforma
@@ -3335,6 +3496,14 @@ function copyPro(){
   });
 }
 
+function copyReasigMsg(){
+  const txt=document.getElementById('reasig-protxt').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const bs=document.querySelectorAll('.copybtn');
+    bs.forEach(b=>{if(b.onclick?.toString().includes('copyReasig')){b.textContent='✓ Copiado';b.classList.add('done');setTimeout(()=>{b.textContent='Copiar';b.classList.remove('done');},3000);}});
+  });
+}
+
 async function saveAcc(){
   if(!caseId)return;
   const c=cases.find(x=>x.id===caseId);
@@ -3379,6 +3548,7 @@ async function saveAcc(){
           'En creación de carpeta SA (falta firma del usuario)':'En creación de carpeta SA (falta firma de Jose Saade)',
           'En creación de carpeta SA (falta firma de Jose Saade)':'Carpeta creada donde Cris',
           'Carpeta creada donde Cris':'Aprobado por el area (a espera de carga de documentos en Emma)',
+          'Se reasignará':'Esperando notificación por Teams',
         };
         c.subestado=map[c.subestado]||c.subestado;
       }
@@ -3397,6 +3567,19 @@ async function saveAcc(){
       };
       if(sm[selAcc]) c.subestado=sm[selAcc];
       c.fechaUltimaAccion=today;
+      // Reasignación: cambiar estudiante y guardar bandera
+      if(selAcc==='reasignar'){
+        const nuevoEst=document.getElementById('m-new-est')?.value.trim().toUpperCase();
+        if(nuevoEst){
+          const estAnterior=c.estudiante;
+          c.estudianteAnterior=estAnterior;
+          c.estudiante=nuevoEst;
+          hist.unshift({ts:new Date().toISOString(),user:cu.name,caseId:caseId,
+            estudiante:nuevoEst,
+            accion:`🔄 Reasignado — antes: ${estAnterior} → ahora: ${nuevoEst}`,
+            subestado:c.subestado});
+        }
+      }
     }
     await saveC(caseId);
     hist.unshift({ts:new Date().toISOString(),user:cu.name,caseId:caseId,estudiante:c.estudiante,accion:a.label,subestado:c.subestado});
@@ -3591,10 +3774,14 @@ function renderAnalitica(){
     <div class="an-kpi pur"><div class="an-klabel">Estudiantes</div><div class="an-kval" style="color:var(--pur)">${new Set(allCases.map(c=>c.estudiante)).size}</div><div class="an-ksub">Únicos en período</div></div>
   `;
 
+  const _isLight=document.body.classList.contains('light');
+  const _tc=_isLight?'#18181e':'#e6e6f0';
+  const _mc=_isLight?'#60607a':'#5e5e78';
+  const _gc=_isLight?'#d0d0df':'#2e2e40';
   const CHART_DEFAULTS={
-    color:'#e6e6f0',
-    plugins:{legend:{labels:{color:'#e6e6f0',font:{family:"'DM Sans',sans-serif",size:11}}}},
-    scales:{x:{ticks:{color:'#5e5e78',font:{size:10}},grid:{color:'#2e2e40'}},y:{ticks:{color:'#5e5e78',font:{size:10}},grid:{color:'#2e2e40'}}},
+    color:_tc,
+    plugins:{legend:{labels:{color:_tc,font:{family:"'DM Sans',sans-serif",size:11}}}},
+    scales:{x:{ticks:{color:_mc,font:{size:10}},grid:{color:_gc}},y:{ticks:{color:_mc,font:{size:10}},grid:{color:_gc}}},
   };
   const COLORS=['#c8102e','#3d8eff','#9b59ff','#00c97a','#f0a500','#ff3355','#00b8d4','#e91e8c','#8bc34a','#ff9800'];
 
@@ -3615,7 +3802,7 @@ function renderAnalitica(){
   const pctFin=fin.length+act.length>0?Math.round(fin.length/(fin.length+act.length)*100):0;
   charts['ch-donut']=new Chart(document.getElementById('ch-donut'),{
     type:'doughnut',
-    data:{labels:['Finalizados','En curso'],datasets:[{data:[fin.length,act.length],backgroundColor:['#00c97a','#3d8eff'],borderColor:'#14141b',borderWidth:3,hoverOffset:6}]},
+    data:{labels:['Finalizados','En curso'],datasets:[{data:[fin.length,act.length],backgroundColor:['#00c97a','#3d8eff'],borderColor:_isLight?'#f2f2f6':'#14141b',borderWidth:3,hoverOffset:6}]},
     options:{
       plugins:{
         legend:{position:'bottom',labels:{color:'#e6e6f0',font:{family:"'DM Sans',sans-serif",size:11},padding:14}},
@@ -3650,14 +3837,37 @@ function renderAnalitica(){
   lkeys.forEach(k=>{liderFin[k]=0;liderAct[k]=0;});
   fin.forEach(f=>{if(liderFin[f.lider]!==undefined)liderFin[f.lider]++;});
   act.forEach(a=>{if(liderAct[a.lider]!==undefined)liderAct[a.lider]++;});
+  const liderTotal=lkeys.map(k=>(liderFin[k]||0)+(liderAct[k]||0));
   destroyChart('ch-lider');
   charts['ch-lider']=new Chart(document.getElementById('ch-lider'),{
     type:'bar',
     data:{labels:lnames,datasets:[
-      {label:'Finalizados',data:lkeys.map(k=>liderFin[k]),backgroundColor:'#00c97a',borderRadius:5,stack:'s'},
-      {label:'Activos',data:lkeys.map(k=>liderAct[k]),backgroundColor:'#3d8eff',borderRadius:5,stack:'s'},
+      {label:'Finalizados',data:lkeys.map(k=>liderFin[k]),backgroundColor:'#00c97a',borderRadius:[0,0,5,5],stack:'s'},
+      {label:'Activos',data:lkeys.map(k=>liderAct[k]),backgroundColor:'#3d8eff',borderRadius:[5,5,0,0],stack:'s'},
     ]},
-    options:{...CHART_DEFAULTS,plugins:{legend:{labels:{color:'#e6e6f0',font:{size:11}}}}}
+    options:{
+      ...CHART_DEFAULTS,
+      plugins:{
+        legend:{labels:{color:_tc,font:{size:11}}},
+        tooltip:{callbacks:{footer:(items)=>'Total: '+liderTotal[items[0].dataIndex]}},
+      },
+      animation:{onComplete(e){
+        const chart=e.chart;
+        const ctx=chart.ctx;
+        ctx.save();
+        ctx.font='bold 12px DM Sans, sans-serif';
+        ctx.fillStyle=_tc;
+        ctx.textAlign='center';
+        ctx.textBaseline='bottom';
+        // Solo pintar en el último dataset (el de arriba de la pila)
+        const ds=chart.getDatasetMeta(1);
+        ds.data.forEach((bar,i)=>{
+          const total=liderTotal[i];
+          if(total>0) ctx.fillText(total, bar.x, bar.y-4);
+        });
+        ctx.restore();
+      }}
+    }
   });
 
   // Chart 4: Evolución mensual
@@ -3687,8 +3897,75 @@ function renderAnalitica(){
   charts['ch-tiempo']=new Chart(document.getElementById('ch-tiempo'),{
     type:'bar',
     data:{labels:tipoAvg.map(t=>t.k),datasets:[{label:'Días promedio',data:tipoAvg.map(t=>t.avg),backgroundColor:tipoAvg.map((_,i)=>COLORS[i%COLORS.length]),borderRadius:5,borderSkipped:false}]},
-    options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CHART_DEFAULTS.scales?.x},y:{...CHART_DEFAULTS.scales?.y,ticks:{color:'#9b9bb8',font:{size:10}}}}}
+    options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...CHART_DEFAULTS.scales?.x},y:{...CHART_DEFAULTS.scales?.y,ticks:{color:_mc,font:{size:10}}}}}
   });
+
+  // Chart 6: Correcciones por tipo de caso
+  const corrTipo={};
+  allCases.filter(c=>c.correcciones>0).forEach(c=>{
+    const k=(c.solucion||'Otro').replace('Solicitud de conciliación','SA').replace('Demanda (restitución de inmueble arrendado)','D.Rest.').replace('Demanda (ejecutiva)','D.Ejec.').replace('Demanda (accion de proteccion al consumidor)','D.APC').replace('Contestación de demanda','Contestación').replace('Reclamación directa','Reclamación').replace('Requerimiento de restitución de inmueble','Req.Rest.').replace('Contrato de arrendamiento','Contrato');
+    if(!corrTipo[k])corrTipo[k]={total:0,casos:0};
+    corrTipo[k].total+=c.correcciones;
+    corrTipo[k].casos++;
+  });
+  // También contar casos sin correcciones para calcular tasa real
+  allCases.forEach(c=>{
+    const k=(c.solucion||'Otro').replace('Solicitud de conciliación','SA').replace('Demanda (restitución de inmueble arrendado)','D.Rest.').replace('Demanda (ejecutiva)','D.Ejec.').replace('Demanda (accion de proteccion al consumidor)','D.APC').replace('Contestación de demanda','Contestación').replace('Reclamación directa','Reclamación').replace('Requerimiento de restitución de inmueble','Req.Rest.').replace('Contrato de arrendamiento','Contrato');
+    if(!corrTipo[k]) corrTipo[k]={total:0,casos:0};
+  });
+  const corrEntries=Object.entries(corrTipo)
+    .map(([k,v])=>({k,avg:v.casos>0?+(v.total/v.casos).toFixed(1):0,total:v.total,casos:v.casos}))
+    .filter(e=>e.total>0)
+    .sort((a,b)=>b.avg-a.avg)
+    .slice(0,10);
+  destroyChart('ch-corr');
+  if(corrEntries.length>0){
+    charts['ch-corr']=new Chart(document.getElementById('ch-corr'),{
+      type:'bar',
+      data:{labels:corrEntries.map(e=>e.k),datasets:[{
+        label:'Correcciones promedio',
+        data:corrEntries.map(e=>e.avg),
+        backgroundColor:corrEntries.map((_,i)=>COLORS[i%COLORS.length]),
+        borderRadius:5,borderSkipped:false
+      }]},
+      options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:item=>`Prom: ${item.raw} corr/caso · Total: ${corrEntries[item.dataIndex].total}`}}
+      },scales:{x:{...CHART_DEFAULTS.scales?.x},y:{...CHART_DEFAULTS.scales?.y,ticks:{color:_mc,font:{size:10}}}}}
+    });
+  } else {
+    const cv=document.getElementById('ch-corr');
+    if(cv){const c2=cv.getContext('2d');c2.clearRect(0,0,cv.width,cv.height);}
+  }
+  // Panel de correcciones por líder
+  const corrLider={};
+  lkeys.forEach(k=>corrLider[k]={total:0,casos:0,conCorr:0});
+  allCases.forEach(c=>{
+    if(corrLider[c.lider]===undefined) return;
+    corrLider[c.lider].casos++;
+    corrLider[c.lider].total+=c.correcciones||0;
+    if((c.correcciones||0)>0) corrLider[c.lider].conCorr++;
+  });
+  const cl=document.getElementById('corr-lider-list');
+  if(cl){
+    cl.innerHTML=lkeys.map((k,i)=>{
+      const d=corrLider[k];
+      const u=gu(k);
+      const avg=d.casos>0?(d.total/d.casos).toFixed(1):0;
+      const pct=d.casos>0?Math.round(d.conCorr/d.casos*100):0;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)">
+        <div class="uav" style="width:28px;height:28px;font-size:10px;background:${u.color}20;color:${u.color};border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">${u.ini}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:500;color:var(--txt)">${u.name.split(' ')[0]}</div>
+          <div style="font-size:10px;color:var(--mut);margin-top:1px">${d.conCorr} casos con corrección · ${pct}% del total</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${pct>30?'var(--red)':pct>15?'var(--gold)':'var(--grn)'}">${avg}</div>
+          <div style="font-size:9px;color:var(--mut)">corr/caso</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   // Fill líder filter
   const lf=document.getElementById('fin-lider');
@@ -3748,23 +4025,50 @@ function exportPDF(){
     const u=gu(lid);
     return `<tr><td>${u.name}</td><td style="text-align:center">${lf+la}</td><td style="text-align:center;color:#00c97a;font-weight:600">${lf}</td><td style="text-align:center;color:#3d8eff">${la}</td></tr>`;
   }).join('');
-  const finRows=fin.slice(0,50).map(f=>{
-    const dur=(f.fechaFin||f.fechaUltimaAccion)?Math.max(0,Math.floor((new Date(f.fechaFin||f.fechaUltimaAccion)-new Date(f.fecha))/86400000))+'d':'—';
-    return `<tr><td>${f.id}</td><td>${f.usuario}</td><td>${f.solucion}</td><td>${gu(f.lider).name.split(' ')[0]}</td><td>${f.fecha}</td><td style="font-weight:600">${dur}</td></tr>`;
+
+  // Capturar gráficas como imágenes (excluir ch-tiempo)
+  const chartIds=['ch-tipo','ch-donut','ch-lider','ch-mes','ch-corr'];
+  const chartTitles={
+    'ch-tipo':'Casos por tipo de solución',
+    'ch-donut':'Finalización vs Activos',
+    'ch-lider':'Casos por líder',
+    'ch-mes':'Evolución mensual de finalizaciones',
+    'ch-corr':'Tasa de correcciones por tipo de caso'
+  };
+  const chartImgs=chartIds.map(id=>{
+    const canvas=document.getElementById(id);
+    if(!canvas) return '';
+    const img=canvas.toDataURL('image/png');
+    const isWide=(id==='ch-tipo'||id==='ch-mes'||id==='ch-corr');
+    return `<div style="margin-bottom:24px${isWide?'':';display:inline-block;width:48%;vertical-align:top;margin-right:2%'}">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles[id]}</div>
+      <img src="${img}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px">
+    </div>`;
   }).join('');
 
   const w=window.open('','_blank');
   const ST='<'+'style'+'>';const SE='</'+'style'+'>';
   const SCR='<'+'script'+'>';const SCRE='</'+'script'+'>';
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe AC</title>`
-    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}@media print{body{padding:18px}}`+SE
+    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.charts-pair{display:flex;gap:16px;margin-bottom:24px}.charts-pair>div{flex:1}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}@media print{body{padding:18px}}`+SE
     +`</head><body>`
     +`<h1>Área Comercial · Informe de Gestión</h1>`
     +`<div class="sub">Consultorio Jurídico CUC · Generado el ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · Por ${cu.name}</div>`
     +`<div class="kpis"><div class="kpi"><div class="kpi-label">Total casos</div><div class="kpi-val">${total}</div><div class="kpi-sub">Período 2026-1</div></div><div class="kpi"><div class="kpi-label">Finalizados</div><div class="kpi-val" style="color:#00c97a">${fin.length}</div><div class="kpi-sub">${pct}% de finalización</div></div><div class="kpi"><div class="kpi-label">En curso</div><div class="kpi-val" style="color:#3d8eff">${act.length}</div><div class="kpi-sub">Casos activos</div></div><div class="kpi"><div class="kpi-label">Tiempo promedio</div><div class="kpi-val" style="color:#f0a500">${avgDur}d</div><div class="kpi-sub">Ingreso → cierre</div></div></div>`
     +`<h2>Distribución por tipo de solución</h2><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>% del total</th></tr></thead><tbody>${tipoRows}</tbody></table>`
     +`<h2>Rendimiento por líder</h2><table><thead><tr><th>Líder</th><th>Total</th><th>Finalizados</th><th>Activos</th></tr></thead><tbody>${liderRows}</tbody></table>`
-    +`<h2>Detalle casos finalizados (últimos 50)</h2><table><thead><tr><th>Radicado</th><th>Usuario</th><th>Tipo</th><th>Líder</th><th>Ingreso</th><th>Duración</th></tr></thead><tbody>${finRows}</tbody></table>`
+    +`<h2>Gráficas de analítica</h2>`
+    // Tipo y Donut lado a lado
+    +`<div class="charts-pair">`
+    +`<div><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-tipo']}</div><img src="${(()=>{const c=document.getElementById('ch-tipo');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
+    +`<div><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-donut']}</div><img src="${(()=>{const c=document.getElementById('ch-donut');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
+    +`</div>`
+    // Líderes ancho completo
+    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-lider']}</div><img src="${(()=>{const c=document.getElementById('ch-lider');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
+    // Evolución mensual ancho completo
+    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-mes']}</div><img src="${(()=>{const c=document.getElementById('ch-mes');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
+    // Correcciones ancho completo
+    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-corr']}</div><img src="${(()=>{const c=document.getElementById('ch-corr');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
     +`<div class="footer">Área Comercial · Consultorio Jurídico CUC · ${new Date().getFullYear()}</div>`
     +SCR+`window.onload=()=>window.print()`+SCRE
     +`</body></html>`;
@@ -3795,6 +4099,9 @@ function startRealtime(){
         data.forEach(r=>{
           const idx=cases.findIndex(c=>c.id===r.id);
           if(idx>=0){
+            // No pisar si fue guardado localmente hace menos de 15s (race condition)
+            const lastSave=localSaved.get(r.id)||0;
+            if(Date.now()-lastSave<15000) return;
             const c=cases[idx];
             // Normalizar null a '' para comparar correctamente
             const rLider=r.lider||'';
@@ -3943,81 +4250,6 @@ function renderTodos(){
     </div>`;
   }).join('');
 }
-// ══════════════════════════════════════════
-//  NOTAS DEL EQUIPO
-// ══════════════════════════════════════════
-let notas=[];
-let notasOpen=false;
-
-async function loadNotas(){
-  try{
-    const{data}=await sb.from('notas').select('*').order('created_at',{ascending:false}).limit(30);
-    if(data) notas=data;
-    renderNotas();
-    updateNotasBadge();
-  }catch(e){}
-}
-
-async function enviarNota(){
-  const texto=document.getElementById('notas-input').value.trim();
-  const dest=document.getElementById('notas-dest').value;
-  if(!texto) return;
-  const nota={texto,dest,autor:cu.id,autor_nombre:cu.name,leida_por:JSON.stringify([cu.id])};
-  try{
-    await sb.from('notas').insert(nota);
-    document.getElementById('notas-input').value='';
-    await loadNotas();
-    showToast('📝 Nota enviada');
-  }catch(e){showToast('⚠️ Error al enviar nota');}
-}
-
-async function marcarNotaLeida(id){
-  try{
-    const nota=notas.find(n=>n.id===id);
-    if(!nota) return;
-    const leidos=JSON.parse(nota.leida_por||'[]');
-    if(!leidos.includes(cu.id)){leidos.push(cu.id);await sb.from('notas').update({leida_por:JSON.stringify(leidos)}).eq('id',id);nota.leida_por=JSON.stringify(leidos);}
-    renderNotas();updateNotasBadge();
-  }catch(e){}
-}
-
-function updateNotasBadge(){
-  const sinLeer=notas.filter(n=>(n.dest==='todos'||n.dest===cu.id)&&n.autor!==cu.id&&!JSON.parse(n.leida_por||'[]').includes(cu.id));
-  const badge=document.getElementById('notas-count');
-  if(badge){badge.style.display=sinLeer.length?'flex':'none';badge.textContent=sinLeer.length||'';}
-}
-
-function renderNotas(){
-  const el=document.getElementById('notas-list');if(!el) return;
-  const visibles=notas.filter(n=>n.dest==='todos'||n.dest===cu.id||n.autor===cu.id);
-  if(!visibles.length){el.innerHTML=`<div style="text-align:center;padding:20px;font-size:12px;color:var(--mut)">Sin notas aún</div>`;return;}
-  el.innerHTML=visibles.map(n=>{
-    const u=gu(n.autor);
-    const leidos=JSON.parse(n.leida_por||'[]');
-    const sinLeer=(n.dest===cu.id||n.dest==='todos')&&n.autor!==cu.id&&!leidos.includes(cu.id);
-    const destLabel=n.dest==='todos'?'📢 Todos':`→ ${gu(n.dest).name}`;
-    const ts=new Date(n.created_at).toLocaleString('es-CO',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div style="background:${sinLeer?'rgba(200,16,46,.08)':'var(--s2)'};border:1px solid ${sinLeer?'rgba(200,16,46,.3)':'var(--bd)'};border-radius:8px;padding:10px 12px;margin-bottom:6px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="width:18px;height:18px;border-radius:50%;background:${u.color}20;color:${u.color};font-size:7px;font-weight:700;display:flex;align-items:center;justify-content:center">${u.ini}</div>
-          <span style="font-size:11px;font-weight:600;color:${u.color}">${u.name.split(' ')[0]}</span>
-          <span style="font-size:10px;color:var(--mut)">${destLabel}</span>
-        </div>
-        <span style="font-size:9px;color:var(--mut)">${ts}</span>
-      </div>
-      <div style="font-size:12px;line-height:1.5">${n.texto}</div>
-      ${sinLeer?`<button onclick="marcarNotaLeida('${n.id}')" style="margin-top:6px;background:var(--grn);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">✓ Leído</button>`:''}
-    </div>`;
-  }).join('');
-}
-
-function toggleNotas(){
-  notasOpen=!notasOpen;
-  document.getElementById('notas-panel').style.display=notasOpen?'block':'none';
-  if(notasOpen) loadNotas();
-}
-
 function renderConsultorio(){
   const el=document.getElementById('vc-consultorio');
   el.innerHTML=`
@@ -4053,13 +4285,358 @@ function abrirGeneradorSA(){
   window.open('https://claude.ai','_blank');
 }
 
+// ══════════════════════════════════════════
+//  TEMA CLARO / OSCURO
+// ══════════════════════════════════════════
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light');
+  localStorage.setItem('ac_theme',isLight?'light':'dark');
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent=isLight?'☀️':'🌙';
+}
+function syncThemeBtn(){
+  const btn=document.getElementById('theme-toggle');
+  if(btn) btn.textContent=document.body.classList.contains('light')?'☀️':'🌙';
+}
+
+// ══════════════════════════════════════════
+//  DIRECTORIO DE ESTUDIANTES
+// ══════════════════════════════════════════
+function saveDirectorio(){
+  try{localStorage.setItem('ac_directorio_v1',JSON.stringify(DIRECTORIO));}catch(e){}
+}
+
+function renderDirectorio(){
+  const vc=document.getElementById('vc-directorio');
+  // Montar shell la primera vez
+  if(!vc.querySelector('#dir-list')){
+    vc.innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">👥 Directorio de estudiantes</div>
+        <input class="srch" id="dir-srch" placeholder="Buscar por nombre, correo o programa…" oninput="renderDirectorio()" style="flex:1;min-width:200px;max-width:360px">
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btnsave" onclick="abrirModalNuevoEst()" style="font-size:12px;padding:6px 14px">+ Agregar estudiante</button>
+          <label class="btnsec" style="font-size:12px;padding:6px 14px;cursor:pointer">📥 Importar
+            <input type="file" accept=".xlsx,.xls,.pdf,.csv" style="display:none" onchange="importarDirectorio(this)">
+          </label>
+        </div>
+      </div>
+      <div id="dir-duplicados" style="display:none;margin-bottom:14px;background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);border-radius:10px;padding:12px 16px"></div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:10px" id="dir-count"></div>
+      <div class="tbl">
+        <div class="th" style="grid-template-columns:2fr 1.2fr 2fr 1fr 80px">
+          <span>Nombre completo</span><span>Usuario</span><span>Correo</span><span>Programa</span><span></span>
+        </div>
+        <div id="dir-list"></div>
+      </div>`;
+  }
+  const q=(document.getElementById('dir-srch')?.value||'').toUpperCase().trim();
+  const lista=q?DIRECTORIO.filter(d=>d.nombre.includes(q)||d.correo.toUpperCase().includes(q)||(d.programa||'').toUpperCase().includes(q)):DIRECTORIO;
+  const sorted=[...lista].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  document.getElementById('dir-count').textContent=`${sorted.length} estudiante${sorted.length!==1?'s':''} · ${DIRECTORIO.filter(d=>d.programa==='Virtual').length} virtual · ${DIRECTORIO.filter(d=>d.programa==='Presencial').length} presencial`;
+  document.getElementById('dir-list').innerHTML=sorted.map((d)=>{
+    const idx=DIRECTORIO.indexOf(d);
+    const progColor=d.programa==='Virtual'?'var(--pur)':'var(--blu)';
+    const usuario=d.usuario||_u(d.correo);
+    return `<div class="tr2" style="grid-template-columns:2fr 1.2fr 2fr 1fr 80px">
+      <span style="font-size:12px;font-weight:500">${d.nombre}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--acc)">${usuario}</span>
+      <span style="font-size:11px;color:var(--mut)">${d.correo}</span>
+      <span><span style="font-size:10px;border:1px solid ${progColor};color:${progColor};border-radius:5px;padding:2px 7px">${d.programa||'—'}</span></span>
+      <span style="display:flex;gap:4px">
+        <button class="actbtn" onclick="editarEst(${idx})" title="Editar" style="padding:3px 6px">✏️</button>
+        <button class="actbtn" onclick="eliminarEst(${idx})" title="Eliminar" style="padding:3px 6px;color:var(--red)">✕</button>
+      </span>
+    </div>`;
+  }).join('');
+  detectarDuplicados();
+}
+
+function detectarDuplicados(){
+  const porCorreo={};
+  DIRECTORIO.forEach((d,i)=>{
+    if(!porCorreo[d.correo]) porCorreo[d.correo]=[];
+    porCorreo[d.correo].push({...d,idx:i});
+  });
+  const dupes=Object.entries(porCorreo).filter(([,arr])=>arr.length>1);
+  const box=document.getElementById('dir-duplicados');
+  if(dupes.length===0){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">⚠️ ${dupes.length} correo${dupes.length>1?'s':''} con nombres distintos — posibles duplicados</div>`
+    +dupes.map(([correo,arr])=>`
+      <div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:8px">
+        <div style="font-size:10px;color:var(--mut);margin-bottom:5px">${correo}</div>
+        ${arr.map(e=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:11px;flex:1">${e.nombre}</span>
+          <button class="actbtn" onclick="fusionarEst(${e.idx},'${correo}')" style="font-size:10px;padding:2px 8px;background:rgba(240,165,0,.15);color:var(--gold);border-color:rgba(240,165,0,.3)">Mantener este</button>
+        </div>`).join('')}
+      </div>`).join('');
+}
+
+function fusionarEst(idxMantener, correo){
+  // Quedar solo con el seleccionado para ese correo
+  const mantener=DIRECTORIO[idxMantener];
+  DIRECTORIO=DIRECTORIO.filter((d,i)=>d.correo!==correo||i===idxMantener);
+  saveDirectorio();
+  renderDirectorio();
+  showToast(`✅ Fusionado — queda: ${mantener.nombre}`);
+}
+
+function autoUsuario(){
+  const correo=document.getElementById('nest-correo').value.trim();
+  const u=document.getElementById('nest-usuario');
+  if(!u.dataset.manual) u.value=correo.split('@')[0];
+}
+
+let nestEditIdx=-1;
+function abrirModalNuevoEst(){
+  nestEditIdx=-1;
+  document.getElementById('nest-title').textContent='Agregar estudiante';
+  document.getElementById('nest-nombre').value='';
+  document.getElementById('nest-correo').value='';
+  document.getElementById('nest-usuario').value='';
+  delete document.getElementById('nest-usuario').dataset.manual;
+  document.getElementById('nest-prog').value='Presencial';
+  document.getElementById('mod-nuevo-est').style.display='flex';
+}
+
+function editarEst(idx){
+  nestEditIdx=idx;
+  const d=DIRECTORIO[idx];
+  document.getElementById('nest-title').textContent='Editar estudiante';
+  document.getElementById('nest-nombre').value=d.nombre;
+  document.getElementById('nest-correo').value=d.correo;
+  const u=document.getElementById('nest-usuario');
+  u.value=d.usuario||_u(d.correo);
+  u.dataset.manual='1';
+  document.getElementById('nest-prog').value=d.programa||'Presencial';
+  document.getElementById('mod-nuevo-est').style.display='flex';
+}
+
+function guardarNuevoEst(){
+  const nombre=document.getElementById('nest-nombre').value.trim().toUpperCase();
+  const correo=document.getElementById('nest-correo').value.trim().toLowerCase();
+  const usuario=document.getElementById('nest-usuario').value.trim().toLowerCase()||_u(correo);
+  const programa=document.getElementById('nest-prog').value;
+  if(!nombre||!correo){showToast('⚠️ Nombre y correo son obligatorios');return;}
+  if(nestEditIdx>=0){
+    DIRECTORIO[nestEditIdx]={nombre,correo,usuario,programa};
+  } else {
+    DIRECTORIO.push({nombre,correo,usuario,programa});
+  }
+  saveDirectorio();
+  document.getElementById('mod-nuevo-est').style.display='none';
+  renderDirectorio();
+  showToast(nestEditIdx>=0?'✅ Estudiante actualizado':'✅ Estudiante agregado');
+}
+
+function eliminarEst(idx){
+  if(!confirm(`¿Eliminar a ${DIRECTORIO[idx].nombre}?`)) return;
+  DIRECTORIO.splice(idx,1);
+  saveDirectorio();
+  renderDirectorio();
+  showToast('🗑 Estudiante eliminado');
+}
+
+function importarDirectorio(input){
+  const file=input.files[0];
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    showToast('⏳ Procesando PDF con IA…');
+    importarDirectorioPDF(file);
+  } else {
+    importarDirectorioExcel(file);
+  }
+  input.value='';
+}
+
+function importarDirectorioExcel(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      procesarFilasDirectorio(rows);
+    }catch(err){showToast('❌ Error al leer el archivo');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function procesarFilasDirectorio(rows){
+  let agregados=0, fusionados=0;
+  rows.forEach(row=>{
+    // Detectar columnas flexiblemente
+    const nombre=(row['NOMBRE']||row['Nombre']||row['NOMBRE COMPLETO']||row['nombre']||'').toString().trim().toUpperCase();
+    const correo=(row['CORREO']||row['Correo']||row['EMAIL']||row['Email']||row['correo']||row['email']||'').toString().trim().toLowerCase();
+    const programa=(row['PROGRAMA']||row['Programa']||row['programa']||'Presencial').toString().trim();
+    const usuario=(row['USUARIO']||row['Usuario']||row['usuario']||row['USER']||'').toString().trim().toLowerCase()||correo.split('@')[0];
+    if(!nombre||!correo||!correo.includes('@')) return;
+    const existeCorreo=DIRECTORIO.findIndex(d=>d.correo===correo);
+    if(existeCorreo>=0){
+      if(nombre.length>DIRECTORIO[existeCorreo].nombre.length) DIRECTORIO[existeCorreo].nombre=nombre;
+      if(usuario) DIRECTORIO[existeCorreo].usuario=usuario;
+      fusionados++;
+    } else {
+      DIRECTORIO.push({nombre,correo,usuario,programa:programa||'Presencial'});
+      agregados++;
+    }
+  });
+  saveDirectorio();
+  renderDirectorio();
+  showToast(`✅ ${agregados} agregados · ${fusionados} fusionados`);
+}
+
+async function importarDirectorioPDF(file){
+  try{
+    const base64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=rej;
+      r.readAsDataURL(file);
+    });
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+          {type:'text',text:'Extrae todos los estudiantes de este documento. Devuelve SOLO un JSON array con objetos {nombre, correo} en mayúsculas el nombre. Sin explicaciones ni markdown.'}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    const txt=data.content?.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const arr=JSON.parse(txt);
+    procesarFilasDirectorio(arr.map(e=>({NOMBRE:e.nombre,CORREO:e.correo})));
+  }catch(err){showToast('❌ Error procesando PDF: '+err.message);}
+}
+
 // ── INIT ──
 (async()=>{
-  // Cargar casos antes de mostrar el login para que salgan los contadores correctos
   cases=await loadC();
   renderLogin();
   loadEmmaAlerts();
 })();
-</script>
+
+// ══════════════════════════════════════════
+//  NOTAS DEL EQUIPO
+// ══════════════════════════════════════════
+let notasAbiertas=false;
+const NOTAS_KEY='ac_notas_v1';
+
+function loadNotas(){
+  try{return JSON.parse(localStorage.getItem(NOTAS_KEY)||'[]');}catch(e){return[];}
+}
+function saveNotas(notas){
+  try{localStorage.setItem(NOTAS_KEY,JSON.stringify(notas));}catch(e){}
+}
+
+function toggleNotas(){
+  notasAbiertas=!notasAbiertas;
+  document.getElementById('notas-panel').style.display=notasAbiertas?'flex':'none';
+  if(notasAbiertas){
+    marcarNotasVistas();
+    renderNotas();
+    setTimeout(()=>document.getElementById('nota-txt')?.focus(),100);
+  }
+}
+
+function renderNotas(){
+  const notas=loadNotas();
+  // Filtrar las que van para el usuario actual o para todos
+  const visibles=notas.filter(n=>n.dest==='todos'||n.dest===cu?.id||n.from===cu?.id)
+    .sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  const el=document.getElementById('notas-list');
+  if(!el) return;
+  if(visibles.length===0){
+    el.innerHTML=`<div style="text-align:center;color:var(--mut);font-size:12px;padding:20px 0">Sin notas aún</div>`;
+    return;
+  }
+  el.innerHTML=visibles.map(n=>{
+    const esPropia=n.from===cu?.id;
+    const u=gu(n.from);
+    const destLabel=n.dest==='todos'?'todos':gu(n.dest).name.split(' ')[0];
+    const fechaLabel=new Date(n.ts).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return `<div style="display:flex;flex-direction:column;gap:3px;${esPropia?'align-items:flex-end':'align-items:flex-start'}">
+      <div style="font-size:9px;color:var(--mut)">${esPropia?'Tú':'<span style=color:'+u.color+';font-weight:600>'+u.name.split(' ')[0]+'</span>'} → ${destLabel} · ${fechaLabel}</div>
+      <div style="max-width:85%;background:${esPropia?'var(--acc)':'var(--s2)'};color:${esPropia?'#fff':'var(--txt)'};border-radius:${esPropia?'12px 12px 2px 12px':'12px 12px 12px 2px'};padding:8px 11px;font-size:12px;line-height:1.5;border:1px solid ${esPropia?'transparent':'var(--bd)'};word-break:break-word">
+        ${n.texto}
+      </div>
+      ${!esPropia&&!n.visto?`<button onclick="marcarVista('${n.id}')" style="font-size:9px;background:none;border:none;color:var(--mut);cursor:pointer;padding:0">✓ Marcar vista</button>`:''}
+      ${n.visto&&!esPropia?`<span style="font-size:9px;color:var(--grn)">✓ Vista</span>`:''}
+    </div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+  actualizarBadge();
+}
+
+function enviarNota(){
+  const txt=document.getElementById('nota-txt')?.value.trim();
+  const dest=document.getElementById('nota-dest')?.value||'todos';
+  if(!txt) return;
+  const notas=loadNotas();
+  notas.push({id:Date.now().toString(),from:cu.id,dest,texto:txt,ts:new Date().toISOString(),visto:false});
+  saveNotas(notas);
+  document.getElementById('nota-txt').value='';
+  renderNotas();
+}
+
+function marcarVista(id){
+  const notas=loadNotas();
+  const n=notas.find(x=>x.id===id);
+  if(n) n.visto=true;
+  saveNotas(notas);
+  renderNotas();
+}
+
+function marcarNotasVistas(){
+  const notas=loadNotas();
+  notas.forEach(n=>{if((n.dest===cu?.id||n.dest==='todos')&&n.from!==cu?.id) n.visto=true;});
+  saveNotas(notas);
+  actualizarBadge();
+}
+
+function actualizarBadge(){
+  const notas=loadNotas();
+  const sinVer=notas.filter(n=>(n.dest===cu?.id||n.dest==='todos')&&n.from!==cu?.id&&!n.visto).length;
+  const badge=document.getElementById('notas-badge');
+  if(!badge) return;
+  badge.style.display=sinVer>0?'flex':'none';
+  badge.textContent=sinVer>9?'9+':sinVer;
+}
+
+// Revisar badge cada 30s
+setInterval(()=>{if(cu) actualizarBadge();},30000);
+<!-- ══ NOTAS FLOTANTES ══ -->
+<button id="notas-btn" onclick="toggleNotas()" title="Notas del equipo" style="display:none;position:fixed;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;border:none;cursor:pointer;font-size:20px;box-shadow:0 4px 16px rgba(200,16,46,.4);align-items:center;justify-content:center;transition:all .2s">
+  💬<span id="notas-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:var(--gold);color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center"></span>
+</button>
+
+<div id="notas-panel" style="display:none;position:fixed;bottom:84px;right:24px;z-index:999;width:340px;max-height:480px;background:var(--s1);border:1px solid var(--bd);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-direction:column;overflow:hidden">
+  <div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
+    <div style="flex:1;font-family:'Syne',sans-serif;font-weight:700;font-size:14px">💬 Notas del equipo</div>
+    <button onclick="toggleNotas()" style="background:none;border:none;color:var(--mut);cursor:pointer;font-size:18px;padding:0 4px">✕</button>
+  </div>
+  <div id="notas-list" style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px"></div>
+  <div style="padding:10px 12px;border-top:1px solid var(--bd)">
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <select class="fsel" id="nota-dest" style="font-size:11px;padding:4px 8px;flex:1">
+        <option value="todos">📢 Para todos</option>
+        <option value="jose">→ Jose</option>
+        <option value="angie">→ Angie</option>
+        <option value="gabriela">→ Gabriela</option>
+        <option value="azhly">→ Azhly</option>
+        <option value="victor">→ Victor</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px">
+      <input class="fi" id="nota-txt" placeholder="Escribe una nota…" style="flex:1;font-size:12px;padding:7px 10px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarNota();}">
+      <button class="btnsave" onclick="enviarNota()" style="padding:7px 12px;font-size:12px">→</button>
+    </div>
+  </div>
+</div>
 </body>
-</html>
