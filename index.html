@@ -2405,41 +2405,147 @@ function generarMsgSAModal(){
   if(!c) return;
   const n=c.estudiante.split(' ').slice(0,2).join(' ');
   const r=c.id;
-  const usuario=c.usuario||'el usuario';
+  const u=c.usuario||'el usuario';
 
-  // Obtener lista de documentos del SA_MSGS (reutilizar la función ya existente)
-  // Generamos el mensaje combinado: instrucción al estudiante + mensaje completo para el usuario
-  const msgCompleto=
-`Buenos días, estimado(a) ${n}:
+  const intro=(tipo)=>`Buenos días, ${n}:\n\nEl radicado ${r} es una Solicitud de Audiencia de Conciliación por ${tipo}. Copia el siguiente mensaje y envíaselo al usuario ${u} HOY MISMO, sin modificarlo.\n\n━━━━━ MENSAJE PARA EL USUARIO ━━━━━\n\nBuenos días, señor(a) ${u}. Le escribo de parte del Consultorio Jurídico del Área Comercial de la Universidad de la Costa. Su caso radicado ${r} ha sido asignado para gestión. Para iniciar la Solicitud de Audiencia de Conciliación necesito que me envíe en un solo mensaje y en máximo 5 días la siguiente información:\n`;
 
-El caso con radicado ${r} ha sido asignado a tu consultorio como SOLICITUD DE AUDIENCIA DE CONCILIACIÓN. Debes copiar el siguiente mensaje y enviárselo AL USUARIO (${usuario}) HOY MISMO. NO lo parafrasees, cópialo exactamente.
+  const cierre=`\n🗓️ MODALIDAD DE AUDIENCIA: indíqueme si prefiere que la audiencia sea Presencial, Virtual o Mixta.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nIMPORTANTE: Después de enviarle ese mensaje al usuario, tienes máximo 2 días para enviarme captura de pantalla como evidencia. Sin esa evidencia no puedo registrar el avance del caso.\n\nSaludos,\nJOSE SAADE\nÁrea Comercial`;
 
-━━━━━ COPIA Y PEGA ESTE MENSAJE AL USUARIO ━━━━━
-Estimado(a) señor(a) ${usuario}, buenos días. Le informamos que la solicitud radicada con número ${r} ha sido asignada a un estudiante del Consultorio Jurídico del Área Comercial de la Universidad de la Costa - CUC para el proceso de Solicitud de Audiencia de Conciliación. Para avanzar con su caso, necesitamos que en un plazo máximo de 5 días hábiles nos haga llegar, EN UN SOLO MENSAJE, todos los documentos e información que se le indicará a continuación. Quedamos atentos, Consultorio Jurídico CUC - Área Comercial.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const msgs={
+    transito: intro('Accidente de tránsito')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Foto o escáner de la tarjeta de propiedad del vehículo (el convocante debe ser el propietario registrado en este documento)
+• Si la otra parte es una persona natural: foto o escáner de su documento de identidad (si lo tiene)
+• Si la otra parte es una aseguradora: certificado de existencia y representación legal (este documento lo puede solicitar directamente a la aseguradora o descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
 
-Una vez envíes ese mensaje, debes informarle al usuario qué datos específicos necesitas. A continuación el detalle completo de lo que debes pedirle:
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
 
-${(()=>{
-  // Obtener solo la parte de documentos del SA_MSG correspondiente
-  const saFns={
-    deudas:(r,n)=>'DOCUMENTOS Y DATOS PARA COBRO DE DEUDAS:\n• Cédula del convocante\n• Documento que acredita la deuda (pagaré, letra, contrato, etc.)\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección, ocupación\n4. HECHOS Y PRETENSIONES: Descripción de la deuda y lo que se busca obtener\n5. DOCUMENTOS ANEXOS',
-    transito:(r,n)=>'DOCUMENTOS Y DATOS PARA ACCIDENTE DE TRÁNSITO:\n• Cédula del convocante (debe ser el propietario del vehículo)\n• Tarjeta de propiedad del vehículo\n• Si convoca aseguradora: certificado de existencia y representación legal\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección, ocupación (si es persona jurídica: razón social, NIT)\n4. HECHOS: Fecha y lugar del accidente, vehículos, daños, pretensiones y cuantía\n5. DOCUMENTOS ANEXOS: Fotos, peritajes, recibos de reparación',
-    arrendamiento:(r,n)=>'DOCUMENTOS Y DATOS PARA ARRENDAMIENTO:\n• Cédula del convocante\n• Contrato de arrendamiento (si fue por escrito)\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección\n4. HECHOS Y PRETENSIONES: Descripción del conflicto de arrendamiento\n5. DOCUMENTOS ANEXOS',
-    consumidor:(r,n)=>'DOCUMENTOS Y DATOS PARA CONSUMIDOR:\n• Cédula del convocante\n• Factura o prueba de compra del producto/servicio\n• Documentos que acrediten el incumplimiento o defecto\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO (empresa/comerciante): Razón social, NIT, dirección, teléfono, representante legal\n4. HECHOS Y PRETENSIONES: Descripción del problema con el producto/servicio\n5. DOCUMENTOS ANEXOS',
-    compraventa:(r,n)=>'DOCUMENTOS Y DATOS PARA COMPRAVENTA ENTRE PERSONAS:\n• Cédula del convocante\n• Contrato o promesa de compraventa (si existe por escrito)\n• Documentos que acrediten el incumplimiento\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección\n4. HECHOS Y PRETENSIONES: Descripción de la compraventa y el incumplimiento\n5. DOCUMENTOS ANEXOS',
-    inmobiliario:(r,n)=>'DOCUMENTOS Y DATOS PARA TEMA INMOBILIARIO:\n• Cédula del convocante\n• Promesa de compraventa o escritura pública (según el caso)\n• Certificado de tradición y libertad del inmueble\n• Documentos que acrediten el incumplimiento por parte de la constructora\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO (constructora): Razón social, NIT, dirección, teléfono, representante legal, certificado de existencia\n4. HECHOS Y PRETENSIONES: Descripción del incumplimiento inmobiliario\n5. DOCUMENTOS ANEXOS',
+📋 DATOS DE LA OTRA PARTE:
+• Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
+• Si es aseguradora: razón social, NIT, dirección, teléfono (obtenibles del certificado)
+
+📝 DESCRIPCIÓN DEL CASO:
+• Fecha y lugar del accidente
+• Descripción de lo que ocurrió y vehículos involucrados
+• Daños sufridos
+• Qué quiere obtener (por ejemplo: indemnización, reparación del vehículo, etc.)
+• Monto aproximado que está reclamando
+`+cierre,
+
+    arrendamiento: intro('Arrendamiento')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Contrato de arrendamiento (solo si fue firmado por escrito — si fue verbal no es necesario)
+• Foto o escáner del documento de identidad del arrendatario/arrendador (si lo tiene)
+
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+
+📋 DATOS DE LA OTRA PARTE:
+Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
+
+📝 DESCRIPCIÓN DEL CASO:
+• ¿Usted es el arrendador (dueño) o el arrendatario (inquilino)?
+• Dirección del inmueble objeto del contrato
+• Descripción del conflicto (cánones impagos, daños, desalojo, etc.)
+• Qué quiere obtener
+• Monto aproximado que está reclamando (si aplica)
+`+cierre,
+
+    deudas: intro('Cobro de deudas')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Documento que acredite la deuda: pagaré, letra de cambio, contrato, factura, recibo, o cualquier prueba escrita que tenga (si la deuda fue verbal y no tiene documento, indíquelo)
+• Foto o escáner del documento de identidad del deudor (si lo tiene)
+
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+
+📋 DATOS DE LA OTRA PARTE (el deudor):
+Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
+
+📝 DESCRIPCIÓN DEL CASO:
+• ¿Cuándo y cómo se originó la deuda?
+• Monto total de la deuda
+• ¿Ha habido pagos parciales? ¿Cuánto se ha pagado y cuánto falta?
+• Qué quiere obtener (por ejemplo: pago total, acuerdo de pago, etc.)
+`+cierre,
+
+    consumidor: intro('Consumidor')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Factura, recibo o comprobante de compra del producto o servicio
+• Fotos, capturas o cualquier evidencia del defecto, incumplimiento o daño
+• Foto o escáner del documento de identidad del vendedor/proveedor (si es persona natural y lo tiene)
+• Si la otra parte es una empresa: certificado de existencia y representación legal (puede solicitarlo directamente a la empresa o descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
+
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+
+📋 DATOS DE LA OTRA PARTE (vendedor o empresa):
+• Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
+• Si es empresa: nombre o razón social, NIT, dirección, teléfono (obtenibles del certificado)
+
+📝 DESCRIPCIÓN DEL CASO:
+• ¿Qué producto o servicio compró y a quién?
+• ¿Cuándo lo compró y cuánto pagó?
+• ¿Qué problema tuvo? (producto defectuoso, servicio no prestado, incumplimiento, etc.)
+• ¿Ya reclamó directamente a la empresa? ¿Qué respondieron?
+• Qué quiere obtener (devolución del dinero, cambio del producto, prestación del servicio, etc.)
+`+cierre,
+
+    compraventa: intro('Compraventa entre personas')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Contrato o promesa de compraventa (si fue firmado por escrito — si fue verbal no es necesario)
+• Recibos, transferencias, capturas de pago o cualquier prueba del dinero entregado
+• Fotos u evidencia del bien objeto de la compraventa (si aplica)
+• Foto o escáner del documento de identidad de la otra parte (si lo tiene)
+
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+
+📋 DATOS DE LA OTRA PARTE:
+Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
+
+📝 DESCRIPCIÓN DEL CASO:
+• ¿Usted es el comprador o el vendedor?
+• ¿Qué se compró/vendió? (descripción del bien)
+• ¿Cuándo se hizo el acuerdo y cuál fue el precio pactado?
+• ¿Qué incumplimiento ocurrió? (no entregó el bien, no pagó, entregó algo diferente, etc.)
+• ¿Se hicieron pagos parciales? ¿Cuánto se pagó y cuánto falta?
+• Qué quiere obtener
+`+cierre,
+
+    inmobiliario: intro('Tema inmobiliario')+`
+📎 DOCUMENTOS:
+• Foto o escáner de su documento de identidad (cédula de ciudadanía)
+• Promesa de compraventa o escritura pública del inmueble (según el caso)
+• Certificado de tradición y libertad del inmueble (puede solicitarlo en la Oficina de Registro de Instrumentos Públicos o en línea en la página de la Superintendencia de Notariado)
+• Documentos que acrediten el incumplimiento: cartas, correos, notificaciones de la constructora o vendedor
+• Foto o escáner del documento de identidad de la otra parte (si es persona natural y lo tiene)
+• Si la otra parte es una constructora o empresa: certificado de existencia y representación legal (puede descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
+
+📋 SUS DATOS PERSONALES:
+Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+
+📋 DATOS DE LA OTRA PARTE (constructora o vendedor):
+• Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
+• Si es empresa o constructora: nombre o razón social, NIT, dirección, teléfono (obtenibles del certificado)
+
+📝 DESCRIPCIÓN DEL CASO:
+• Dirección o descripción del inmueble
+• ¿Cuál es el incumplimiento? (entrega tardía, defectos de construcción, no escrituración, cobros indebidos, etc.)
+• ¿Cuánto pagó y en qué fechas?
+• ¿Ha reclamado directamente a la constructora? ¿Qué respondieron?
+• Qué quiere obtener
+`+cierre,
   };
-  return (saFns[subtipo]||saFns.deudas)(r,n);
-})()}
 
-IMPORTANTE: Una vez envíes ese mensaje al usuario, debes enviarme a MÍ (Jose Saade) captura o evidencia de haberlo enviado en UN MÁXIMO DE 2 DÍAS. Si no recibo esa evidencia, se contará como incumplimiento.
-
-Saludos,
-JOSE SAADE
-Área Comercial`;
-
-  document.getElementById('sa-msg-txt').textContent=msgCompleto;
+  const msg=msgs[subtipo]||msgs.deudas;
+  document.getElementById('sa-msg-txt').textContent=msg;
   document.getElementById('sa-msg-modal').style.display='block';
 }
 
@@ -3252,8 +3358,9 @@ function openAcc(id){
   document.getElementById('copybtn').textContent='Copiar';
   document.getElementById('copybtn').classList.remove('done');
 
-  // Populate cambios dropdowns
-  document.getElementById('cambios-box').style.display='block';
+  // Populate cambios dropdowns — ocultar para SA en Esperando notificación (el selector ya está arriba)
+  const esSAEsperando=c.solucion==='Solicitud de conciliación'&&c.subestado==='Esperando notificación por Teams';
+  document.getElementById('cambios-box').style.display=esSAEsperando?'none':'block';
   const solSel=document.getElementById('m-newsol');
   solSel.innerHTML='<option value="">— sin cambio de tipo —</option>'+SOLUCIONES.map(s=>`<option value="${s}"${s===c.solucion?' selected':''}>${s}</option>`).join('');
   solSel.onchange=()=>{if(solSel.value&&solSel.value!==c.solucion)document.getElementById('savebtn').disabled=false;};
