@@ -761,7 +761,20 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       </div>
       <div class="fgrid2">
         <div class="fg"><label class="fl">Líder asignado <span style="color:var(--mut)">(opcional)</span></label><select class="fsel" id="a-lid"></select></div>
-        <div class="fg"><label class="fl">Posible solución *</label><select class="fsel" id="a-sol"></select></div>
+        <div class="fg"><label class="fl">Posible solución *</label><select class="fsel" id="a-sol" onchange="onSolucionChange()"></select></div>
+        <!-- Subtipo SA — aparece solo cuando se selecciona SA -->
+        <div id="a-sa-subtipo-box" style="display:none;margin-top:4px">
+          <label class="fl">Tipo de conciliación *</label>
+          <select class="fsel" id="a-sa-subtipo">
+            <option value="">— Selecciona el tipo —</option>
+            <option value="deudas">Cobro de deudas (general)</option>
+            <option value="transito">Accidente de tránsito</option>
+            <option value="arrendamiento">Arrendamiento</option>
+            <option value="consumidor">Consumidor</option>
+            <option value="compraventa">Compraventa entre personas</option>
+            <option value="inmobiliario">Tema inmobiliario (constructora)</option>
+          </select>
+        </div>
       </div>
       <div class="fgrid2">
         <div class="fg"><label class="fl">Subestado inicial *</label><select class="fsel" id="a-sub"></select></div>
@@ -893,7 +906,19 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div class="fg" style="margin-top:12px"><label class="fl">Radicado</label><input class="fi" id="edit-rad-input" placeholder="SC-XXXXX"></div>
       <div class="fg" style="margin-top:12px">
         <label class="fl">Tipo de solución</label>
-        <select class="fsel" id="edit-sol"></select>
+        <select class="fsel" id="edit-sol" onchange="document.getElementById('edit-sa-subtipo-box').style.display=this.value==='Solicitud de conciliación'?'block':'none'"></select>
+      </div>
+      <div id="edit-sa-subtipo-box" style="display:none;margin-top:4px">
+        <label class="fl">Tipo de conciliación</label>
+        <select class="fsel" id="edit-sa-subtipo">
+          <option value="">— Selecciona el tipo —</option>
+          <option value="deudas">Cobro de deudas (general)</option>
+          <option value="transito">Accidente de tránsito</option>
+          <option value="arrendamiento">Arrendamiento</option>
+          <option value="consumidor">Consumidor</option>
+          <option value="compraventa">Compraventa entre personas</option>
+          <option value="inmobiliario">Tema inmobiliario (constructora)</option>
+        </select>
       </div>
       <!-- Solo para finalizados -->
       <div id="edit-reactivar-box" style="display:none;margin-top:16px;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.25);border-radius:8px;padding:12px 14px">
@@ -2373,6 +2398,58 @@ function selEstudiante(nombre, correo, listId){
   document.getElementById(listId).style.display='none';
 }
 
+function generarMsgSAModal(){
+  const subtipo=document.getElementById('sa-subtipo-modal')?.value;
+  if(!subtipo) return;
+  const c=cases.find(x=>x.id===caseId);
+  if(!c) return;
+  const n=c.estudiante.split(' ').slice(0,2).join(' ');
+  const r=c.id;
+  const usuario=c.usuario||'el usuario';
+
+  // Obtener lista de documentos del SA_MSGS (reutilizar la función ya existente)
+  // Generamos el mensaje combinado: instrucción al estudiante + mensaje completo para el usuario
+  const msgCompleto=
+`Buenos días, estimado(a) ${n}:
+
+El caso con radicado ${r} ha sido asignado a tu consultorio como SOLICITUD DE AUDIENCIA DE CONCILIACIÓN. Debes copiar el siguiente mensaje y enviárselo AL USUARIO (${usuario}) HOY MISMO. NO lo parafrasees, cópialo exactamente.
+
+━━━━━ COPIA Y PEGA ESTE MENSAJE AL USUARIO ━━━━━
+Estimado(a) señor(a) ${usuario}, buenos días. Le informamos que la solicitud radicada con número ${r} ha sido asignada a un estudiante del Consultorio Jurídico del Área Comercial de la Universidad de la Costa - CUC para el proceso de Solicitud de Audiencia de Conciliación. Para avanzar con su caso, necesitamos que en un plazo máximo de 5 días hábiles nos haga llegar, EN UN SOLO MENSAJE, todos los documentos e información que se le indicará a continuación. Quedamos atentos, Consultorio Jurídico CUC - Área Comercial.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Una vez envíes ese mensaje, debes informarle al usuario qué datos específicos necesitas. A continuación el detalle completo de lo que debes pedirle:
+
+${(()=>{
+  // Obtener solo la parte de documentos del SA_MSG correspondiente
+  const saFns={
+    deudas:(r,n)=>'DOCUMENTOS Y DATOS PARA COBRO DE DEUDAS:\n• Cédula del convocante\n• Documento que acredita la deuda (pagaré, letra, contrato, etc.)\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección, ocupación\n4. HECHOS Y PRETENSIONES: Descripción de la deuda y lo que se busca obtener\n5. DOCUMENTOS ANEXOS',
+    transito:(r,n)=>'DOCUMENTOS Y DATOS PARA ACCIDENTE DE TRÁNSITO:\n• Cédula del convocante (debe ser el propietario del vehículo)\n• Tarjeta de propiedad del vehículo\n• Si convoca aseguradora: certificado de existencia y representación legal\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección, ocupación (si es persona jurídica: razón social, NIT)\n4. HECHOS: Fecha y lugar del accidente, vehículos, daños, pretensiones y cuantía\n5. DOCUMENTOS ANEXOS: Fotos, peritajes, recibos de reparación',
+    arrendamiento:(r,n)=>'DOCUMENTOS Y DATOS PARA ARRENDAMIENTO:\n• Cédula del convocante\n• Contrato de arrendamiento (si fue por escrito)\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección\n4. HECHOS Y PRETENSIONES: Descripción del conflicto de arrendamiento\n5. DOCUMENTOS ANEXOS',
+    consumidor:(r,n)=>'DOCUMENTOS Y DATOS PARA CONSUMIDOR:\n• Cédula del convocante\n• Factura o prueba de compra del producto/servicio\n• Documentos que acrediten el incumplimiento o defecto\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO (empresa/comerciante): Razón social, NIT, dirección, teléfono, representante legal\n4. HECHOS Y PRETENSIONES: Descripción del problema con el producto/servicio\n5. DOCUMENTOS ANEXOS',
+    compraventa:(r,n)=>'DOCUMENTOS Y DATOS PARA COMPRAVENTA ENTRE PERSONAS:\n• Cédula del convocante\n• Contrato o promesa de compraventa (si existe por escrito)\n• Documentos que acrediten el incumplimiento\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO: Nombres completos, documento, teléfono, correo, dirección\n4. HECHOS Y PRETENSIONES: Descripción de la compraventa y el incumplimiento\n5. DOCUMENTOS ANEXOS',
+    inmobiliario:(r,n)=>'DOCUMENTOS Y DATOS PARA TEMA INMOBILIARIO:\n• Cédula del convocante\n• Promesa de compraventa o escritura pública (según el caso)\n• Certificado de tradición y libertad del inmueble\n• Documentos que acrediten el incumplimiento por parte de la constructora\n• Si actúa con apoderado: poder, cédula y tarjeta profesional\n\n1. MODALIDAD: Presencial, Virtual o Mixta\n2. DATOS DEL CONVOCANTE: Nombres completos, documento, teléfono, correo, dirección, estado civil, fecha de nacimiento, género, escolaridad, estrato, ocupación, discapacidad, víctima VBG, víctima conflicto, grupo étnico\n3. DATOS DEL CONVOCADO (constructora): Razón social, NIT, dirección, teléfono, representante legal, certificado de existencia\n4. HECHOS Y PRETENSIONES: Descripción del incumplimiento inmobiliario\n5. DOCUMENTOS ANEXOS',
+  };
+  return (saFns[subtipo]||saFns.deudas)(r,n);
+})()}
+
+IMPORTANTE: Una vez envíes ese mensaje al usuario, debes enviarme a MÍ (Jose Saade) captura o evidencia de haberlo enviado en UN MÁXIMO DE 2 DÍAS. Si no recibo esa evidencia, se contará como incumplimiento.
+
+Saludos,
+JOSE SAADE
+Área Comercial`;
+
+  document.getElementById('sa-msg-txt').textContent=msgCompleto;
+  document.getElementById('sa-msg-modal').style.display='block';
+}
+
+// También mostrar el selector al abrir el modal de registro de caso con SA
+function onSolucionChange(){
+  const sol=document.getElementById('a-sol')?.value;
+  const saBox=document.getElementById('a-sa-subtipo-box');
+  if(saBox) saBox.style.display=sol==='Solicitud de conciliación'?'block':'none';
+}
+
 function generarMsgReasig(){
   const nombre=document.getElementById('m-new-est').value.trim();
   const msgBox=document.getElementById('reasig-msg-box');
@@ -2625,6 +2702,10 @@ function openEdit(id){
   document.getElementById('edit-rad-input').value=c.id||'';
   const solSel=document.getElementById('edit-sol');
   solSel.innerHTML=SOLUCIONES.map(s=>`<option value="${s}"${s===c.solucion?' selected':''}>${s}</option>`).join('');
+  // Mostrar subtipo SA si corresponde
+  const editSABox=document.getElementById('edit-sa-subtipo-box');
+  editSABox.style.display=c.solucion==='Solicitud de conciliación'?'block':'none';
+  if(c.tipoSA) document.getElementById('edit-sa-subtipo').value=c.tipoSA;
   // Mostrar opción de reactivar si está finalizado
   document.getElementById('edit-reactivar-box').style.display=
     c.subestado==='Finalizado'?'block':'none';
@@ -2640,6 +2721,10 @@ async function saveEdit(){
   c.periodo=document.getElementById('edit-per').value;
   c.fecha=document.getElementById('edit-fecha').value;
   c.solucion=document.getElementById('edit-sol').value||c.solucion;
+  if(c.solucion==='Solicitud de conciliación'){
+    const ts=document.getElementById('edit-sa-subtipo')?.value;
+    if(ts) c.tipoSA=ts;
+  }
   // Si cambió el radicado
   if(nuevoRad&&nuevoRad!==editId){
     // Cambiar ID: eliminar viejo, insertar nuevo
@@ -3185,13 +3270,23 @@ function openAcc(id){
   // Instrucciones automáticas para primer documento
   const instr=getInstrucciones(c.solucion);
   if(c.solucion==='Solicitud de conciliación'&&(c.subestado==='Esperando notificación por Teams')){
-    const msgSA=PROFORMAS.sa_notif_estudiante(c.id,c.estudiante.split(' ').slice(0,2).join(' '),c.usuario);
-    alertHtml+=`<div style="background:rgba(155,89,255,.08);border:1px solid rgba(155,89,255,.25);border-radius:8px;padding:10px 14px;margin-bottom:4px;font-size:11px;color:var(--pur);font-weight:600">
-      📢 Mensaje para el estudiante — incluye instrucción con el texto para el usuario
-    </div>
-    <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:12px;font-size:11px;white-space:pre-wrap;line-height:1.7;color:var(--txt);position:relative">
-      <button class="copybtn" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent).then(()=>showToast('✅ Copiado'))">Copiar</button>
-      <span>${msgSA}</span>
+    alertHtml+=`<div style="background:rgba(155,89,255,.08);border:1px solid rgba(155,89,255,.25);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--pur);margin-bottom:8px">📢 Solicitud de Audiencia — selecciona el tipo para generar el mensaje completo</div>
+      <select class="fsel" id="sa-subtipo-modal" onchange="generarMsgSAModal()" style="margin-bottom:10px;font-size:12px">
+        <option value="">— Selecciona el tipo de conciliación —</option>
+        <option value="deudas">Cobro de deudas (general)</option>
+        <option value="transito">Accidente de tránsito</option>
+        <option value="arrendamiento">Arrendamiento</option>
+        <option value="consumidor">Consumidor</option>
+        <option value="compraventa">Compraventa entre personas</option>
+        <option value="inmobiliario">Tema inmobiliario (constructora)</option>
+      </select>
+      <div id="sa-msg-modal" style="display:none">
+        <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:14px;font-size:11px;white-space:pre-wrap;line-height:1.7;color:var(--txt);position:relative;max-height:260px;overflow-y:auto">
+          <button class="copybtn" onclick="navigator.clipboard.writeText(document.getElementById('sa-msg-txt').textContent).then(()=>showToast('✅ Copiado'))">Copiar</button>
+          <span id="sa-msg-txt"></span>
+        </div>
+      </div>
     </div>`;
   } else if(instr&&(c.subestado==='A espera de respuesta de estudiante (primer aviso)'||c.subestado==='Esperando notificación por Teams')){
     alertHtml+=`<div style="background:rgba(0,201,122,.08);border:1px solid rgba(0,201,122,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--grn);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
@@ -3861,6 +3956,8 @@ function openAdd(){
   document.getElementById('a-rad').value='';document.getElementById('a-est').value='';
   document.getElementById('a-usu').value='';
   document.getElementById('a-per').value='2026-1';
+  document.getElementById('a-sa-subtipo-box').style.display='none';
+  document.getElementById('a-sa-subtipo').value='';
   document.getElementById('mod-add').classList.add('open');
 }
 
