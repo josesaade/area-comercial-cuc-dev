@@ -450,6 +450,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
       <div class="shdr">
         <div class="stitle">📝 Cartas de Compromiso y Abandono</div>
         <button class="btnadd" onclick="openAddCompromiso()">+ Registrar carta</button>
+        <button class="btnadd" onclick="exportCompromisosPDF()" style="background:var(--pur)">⬇ Exportar informe</button>
       </div>
       <div class="frow" style="margin-bottom:16px">
         <input class="srch" id="comp-srch" placeholder="Buscar estudiante o radicado…" oninput="renderCompromisos()" style="width:230px">
@@ -597,6 +598,10 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
           <canvas id="ch-tiempo" height="180"></canvas>
         </div>
       </div>
+      <!-- Comparativo de períodos -->
+      <div class="an-row2" style="margin-top:14px">
+        <div class="an-card" style="flex:1" id="comp-periodos"></div>
+      </div>
       <!-- Charts row 3 -->
       <div class="an-row2" style="margin-top:14px">
         <div class="an-card" style="flex:1.2">
@@ -722,6 +727,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
     </div>
     <div class="mftr">
       <button class="btnsec" onclick="openHistorialCaso(caseId)">📋 Ver historial</button>
+      <button class="btnsec" onclick="abrirRecordatorio(caseId)" title="Programar recordatorio">⏰ Recordatorio</button>
       <button class="btnsec" onclick="cm('mod-accion')">Cancelar</button>
       <button class="btnsave" id="savebtn" disabled onclick="saveAcc()">Guardar acción</button>
     </div>
@@ -773,7 +779,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
 <div class="overlay" id="mod-comp">
   <div class="modal" style="max-width:560px">
     <div class="mhdr">
-      <div><div class="mtitle">Registrar carta</div><div class="mrad">Compromiso o Abandono</div></div>
+      <div><div class="mtitle" id="comp-modal-title">Registrar carta</div><div class="mrad">Compromiso o Abandono</div></div>
       <button class="mclose" onclick="cm('mod-comp')">✕</button>
     </div>
     <div class="mbody">
@@ -807,7 +813,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
     </div>
     <div class="mftr">
       <button class="btnsec" onclick="cm('mod-comp')">Cancelar</button>
-      <button class="btnsave" onclick="saveComp()">Registrar carta</button>
+      <button class="btnsave" id="comp-modal-btn" onclick="saveComp()">Registrar carta</button>
     </div>
   </div>
 </div>
@@ -923,11 +929,62 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
           <option value="Virtual">Virtual</option>
         </select>
       </div>
+      <div class="fg"><label class="fl">Consultorio</label>
+        <select class="fsel" id="nest-cons">
+          <option value="">— Sin asignar —</option>
+          <option value="1">Consultorio 1</option>
+          <option value="2">Consultorio 2</option>
+          <option value="3">Consultorio 3</option>
+          <option value="4">Consultorio 4</option>
+        </select>
+      </div>
     </div>
     <div class="mftr">
       <button class="btnsec" onclick="document.getElementById('mod-nuevo-est').style.display='none'">Cancelar</button>
       <button class="btnsave" onclick="guardarNuevoEst()">Guardar</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ MODAL RECORDATORIO ══ -->
+<div class="overlay" id="mod-recordatorio">
+  <div class="modal" style="max-width:380px">
+    <div class="mhdr">
+      <div><div class="mtitle">⏰ Programar recordatorio</div><div class="mrad" id="rec-rad"></div></div>
+      <button class="mclose" onclick="cm('mod-recordatorio')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fg">
+        <label class="fl">¿Cuándo recordar?</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="chip" onclick="setRecDias(1)" style="border-radius:20px;padding:4px 12px;font-size:11px">Mañana</button>
+          <button class="chip" onclick="setRecDias(3)" style="border-radius:20px;padding:4px 12px;font-size:11px">En 3 días</button>
+          <button class="chip" onclick="setRecDias(7)" style="border-radius:20px;padding:4px 12px;font-size:11px">En 1 semana</button>
+        </div>
+        <input type="date" class="fi" id="rec-fecha">
+      </div>
+      <div class="fg"><label class="fl">Nota del recordatorio</label>
+        <input class="fi" id="rec-nota" placeholder="Ej: Llamar al estudiante, revisar documento…">
+      </div>
+    </div>
+    <div class="mftr">
+      <button class="btnsec" onclick="cm('mod-recordatorio')">Cancelar</button>
+      <button class="btnsave" onclick="guardarRecordatorio()">⏰ Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL PERFIL ESTUDIANTE ══ -->
+<div class="overlay" id="mod-est-perfil">
+  <div class="modal" style="max-width:580px">
+    <div class="mhdr">
+      <div>
+        <div class="mtitle" id="ep-nombre"></div>
+        <div class="mrad" id="ep-info"></div>
+      </div>
+      <button class="mclose" onclick="cm('mod-est-perfil')">✕</button>
+    </div>
+    <div class="mbody" id="ep-body"></div>
   </div>
 </div>
 
@@ -1042,7 +1099,23 @@ let DIRECTORIO=[
   {nombre:'NAVAS OSORIO KELLYS',correo:'kosorio9@cuc.edu.co',programa:'Presencial'},
 ];
 // Cargar ediciones guardadas en localStorage
-(function(){try{const saved=localStorage.getItem('ac_directorio_v1');if(saved)DIRECTORIO=JSON.parse(saved);}catch(e){}})();
+(function(){
+  try{
+    const saved=localStorage.getItem('ac_directorio_v1');
+    if(saved){
+      const parsed=JSON.parse(saved);
+      if(Array.isArray(parsed)&&parsed.length>0){
+        // Migrar entradas antiguas que no tengan usuario
+        DIRECTORIO=parsed.map(d=>({
+          nombre:d.nombre||'',
+          correo:d.correo||'',
+          usuario:d.usuario||_u(d.correo||''),
+          programa:d.programa||'Presencial'
+        }));
+      }
+    }
+  }catch(e){console.warn('Error cargando directorio:',e);}
+})();
 
 function getCorreoEstudiante(nombre){
   if(!nombre) return null;
@@ -1135,10 +1208,14 @@ const ACCIONES=[
   {id:'notificacion',   icon:'📢', label:'Recordar notificación por Teams',      color:'#3d8eff', avanza:false, pro:'notificacion'},
   {id:'cargue_emma',    icon:'💻', label:'Recordar cargue de docs en Emma',      color:'#3d8eff', avanza:false, pro:'cargue_emma'},
   // SA específicas
-  {id:'sa_desestimiento',  icon:'🚫', label:'Desestimiento del caso',            color:'#ff3355', avanza:true,  pro:null},
-  {id:'sa_jose_firmo',     icon:'✍️', label:'Jose Saade firmó la carpeta',       color:'#00c97a', avanza:true,  pro:null},
-  {id:'sa_centro_acepto',  icon:'🏛️', label:'Centro de Conciliación aceptó ✅',  color:'#00c97a', avanza:true,  pro:null},
-  {id:'sa_centro_devolvio',icon:'↩️', label:'Centro devolvió — corregir',        color:'#ff3355', avanza:false, pro:null},
+  {id:'sa_desestimiento',    icon:'🚫', label:'Desestimiento del caso',                color:'#ff3355', avanza:true,  pro:null},
+  {id:'sa_jose_firmo',       icon:'✍️', label:'Jose Saade firmó la carpeta',           color:'#00c97a', avanza:true,  pro:null},
+  {id:'sa_centro_acepto',    icon:'🏛️', label:'Centro de Conciliación aceptó ✅',      color:'#00c97a', avanza:true,  pro:null},
+  {id:'sa_centro_devolvio',  icon:'↩️', label:'Centro devolvió — corregir',            color:'#ff3355', avanza:false, pro:null},
+  {id:'sa_prueba_si',        icon:'✅', label:'Estudiante mandó el mensaje al usuario', color:'#00c97a', avanza:true,  pro:null},
+  {id:'sa_prueba_no',        icon:'📵', label:'Estudiante NO ha mandado prueba aún',    color:'#ff3355', avanza:false, pro:'sa_recordar_prueba'},
+  {id:'sa_datos_completos',  icon:'📋', label:'Usuario entregó todos los datos',        color:'#00c97a', avanza:true,  pro:null},
+  {id:'sa_segundo_aviso',    icon:'⚠️', label:'2do aviso — datos no han llegado',       color:'#ff3355', avanza:false, pro:'sa_segundo_aviso_datos'},
 ];
 
 // ══════════════════════════════════════════
@@ -1209,6 +1286,43 @@ Para realizar las correcciones necesarias en el documento adjunto del radicado $
 
 Atentamente,
 José Saade · Área Comercial`,
+
+  sa_notif_estudiante:(r,n,usuario)=>
+`Buenos días, estimado(a) ${n}:
+
+El caso con radicado ${r} te ha sido asignado. Debes copiar el siguiente mensaje y enviárselo AL USUARIO (${usuario||'el usuario'}) HOY MISMO. NO lo parafrasees, envíalo TAL CUAL.
+
+━━━━━ MENSAJE PARA EL USUARIO ━━━━━
+Estimado(a) señor(a) ${usuario||'usuario'}, buenos días. Le informamos que la solicitud radicada con número ${r} ha sido recibida y asignada a un estudiante de práctica del Consultorio Jurídico del Área Comercial de la Universidad de la Costa - CUC. Para iniciar el proceso de conciliación, necesitamos que nos haga llegar a la mayor brevedad posible y en UN SOLO MENSAJE todos los documentos e información requeridos (los cuales el estudiante le indicará). Usted tiene máximo 5 días para enviarnos esta información. Si en ese plazo no recibimos sus documentos, no será posible continuar con el proceso. Quedamos atentos, Consultorio Jurídico CUC - Área Comercial.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPORTANTE: Una vez envíes ese mensaje al usuario, debes enviarme a MÍ (Jose Saade) captura de pantalla o evidencia de haberlo enviado en UN PLAZO MÁXIMO DE 2 DÍAS. Si no recibo esa evidencia, se contará como incumplimiento.
+
+Saludos,
+JOSE SAADE
+Área Comercial`,
+
+  sa_recordar_prueba:(r,n)=>
+`Buenas, estimado(a) ${n}:
+
+Revisando el caso ${r}, noto que no me has enviado la evidencia de haber notificado al usuario. Recuerda que tienes máximo 2 días desde la notificación del caso para enviarme captura de que le enviaste el mensaje.
+
+Por favor hazlo inmediatamente o comunícate conmigo para indicarme el motivo del retraso.
+
+JOSE SAADE
+Área Comercial`,
+
+  sa_segundo_aviso_datos:(r,n,usuario)=>
+`Buenas, estimado(a) ${n}:
+
+Han transcurrido 5 días desde que le solicitaste los datos al usuario del caso ${r} (${usuario||'el usuario'}) y aún no se ha recibido la información completa. Este es el SEGUNDO y ÚLTIMO AVISO.
+
+Envíale nuevamente el mensaje de solicitud de documentos al usuario indicándole que esta es su última oportunidad con un plazo de 5 días adicionales. Si al vencer este nuevo plazo no hay respuesta, el caso pasará al proceso de gestión directa del área.
+
+Envíame evidencia del reenvío.
+
+JOSE SAADE
+Área Comercial`,
 
   reasignacion:(r,n)=>
 `Buenos días, estimado(a) ${n}:
@@ -1404,12 +1518,16 @@ async function loadC(){
     clearTimeout(timeout);
     if(error){console.error('loadC error:',error);return[];}
     if(!data||data.length===0) return[];
-    return data.map(r=>{
+    const toUpdate = []; // casos cuyo nombre hay que corregir en Supabase
+    const mapped = data.map(r=>{
       let estudiante=r.estudiante||'';
       // Si el estudiante parece un username (sin espacios o con @), buscar en directorio
       if(estudiante&&(!estudiante.includes(' ')||estudiante.includes('@'))){
         const match=getEstudianteByUsuario(estudiante.replace('@cuc.edu.co',''));
-        if(match) estudiante=match.nombre;
+        if(match){
+          toUpdate.push({id:r.id, nombre:match.nombre});
+          estudiante=match.nombre;
+        }
       }
       return {
         id:r.id, estudiante, lider:r.lider||'', solucion:r.solucion||'',
@@ -1419,6 +1537,14 @@ async function loadC(){
         estado:r.estado||'ASIGNADA', usuario:r.usuario||''
       };
     });
+    // Corregir nombres en Supabase silenciosamente en segundo plano
+    if(toUpdate.length>0){
+      console.log(`Resolviendo ${toUpdate.length} username(s) → nombre completo en Supabase…`);
+      toUpdate.forEach(u=>{
+        sb.from('casos').update({estudiante:u.nombre}).eq('id',u.id).then(()=>{});
+      });
+    }
+    return mapped;
   }catch(e){
     console.error('loadC exception:',e);
     return[];
@@ -1470,19 +1596,6 @@ async function saveH(){
 }
 
 // ── Compromisos ──
-function loadCompromisos(){return[];}
-
-async function saveCompromisos(){
-  if(!compromisos.length) return;
-  const last=compromisos[0];
-  if(last._saved) return;
-  await sb.from('compromisos').insert({
-    rad:last.rad, est:last.est, tipo:last.tipo, fec:last.fec,
-    motivo:last.motivo, resp:last.resp, por:last.por
-  });
-  last._saved=true;
-}
-
 async function loadCompromisosDB(){
   const{data}=await sb.from('compromisos').select('*').order('ts',{ascending:false});
   if(!data) return [];
@@ -1536,6 +1649,9 @@ function getSubColor(s){
     'En creación de carpeta SA (falta firma del usuario)':{bg:'rgba(61,142,255,.12)',col:'#3d8eff'},
     'En creación de carpeta SA (falta firma de Jose Saade)':{bg:'rgba(200,16,46,.12)',col:'#c8102e'},
     'Carpeta creada donde Cris':                  {bg:'rgba(0,201,122,.12)',col:'#00c97a'},
+    'SA: esperando prueba de envío al usuario':    {bg:'rgba(155,89,255,.12)',col:'#9b59ff'},
+    'SA: esperando datos del usuario (1er aviso)': {bg:'rgba(240,165,0,.12)', col:'#f0a500'},
+    'SA: esperando datos del usuario (2do aviso)': {bg:'rgba(255,51,85,.12)', col:'#ff3355'},
     'Aprobado por el area (a espera de carga de documentos en Emma)':{bg:'rgba(0,201,122,.12)',col:'#00c97a'},
     'Se reasignará':                              {bg:'rgba(255,51,85,.12)',col:'#ff3355'},
     'Finalizado':                                 {bg:'rgba(62,62,88,.2)',col:'#5e5e78'},
@@ -1561,15 +1677,25 @@ function activos(list){return list.filter(c=>c.subestado!=='Finalizado');}
 // ══════════════════════════════════════════
 function renderLogin(){
   const g=document.getElementById('ugrid');
+  const liderIds=['angie','gabriela','azhly','victor'];
+  const maxCarga=Math.max(...liderIds.map(id=>activos(cases.filter(c=>c.lider===id)).length),1);
   g.innerHTML=USERS.map(u=>{
     const n=u.id==='jose'?activos(cases).length:activos(cases.filter(c=>c.lider===u.id)).length;
     const pend=(u.id==='jose'?activos(cases):activos(cases.filter(c=>c.lider===u.id)))
       .filter(c=>ESTADOS_ESPERANDO.has(c.subestado)&&diasUA(c)>=3).length;
+    // Semáforo solo para líderes
+    let semaforo='';
+    if(u.role==='Líder'){
+      const ratio=n/maxCarga;
+      const [col,lbl]=ratio>=0.85?['#ff3355','🔴 Alta']:ratio>=0.5?['#f0a500','🟡 Media']:['#00c97a','🟢 Libre'];
+      semaforo=`<div style="font-size:9px;color:${col};background:${col}18;border:1px solid ${col}30;padding:2px 7px;border-radius:10px;font-weight:600">${lbl}</div>`;
+    }
     return `<button class="ubtn" onclick="selU('${u.id}')">
       <div class="uav" style="background:${u.color}20;color:${u.color}">${u.ini}</div>
       <div class="user-info"><div class="uname">${u.name}</div><div class="urole">${u.role}</div></div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
         <div class="ucnt">${n} activos</div>
+        ${semaforo}
         ${pend>0?`<div style="font-size:9px;background:rgba(240,165,0,.15);color:var(--gold);padding:2px 7px;border-radius:10px;font-weight:600">📬 ${pend} hoy</div>`:''}
       </div>
     </button>`;
@@ -1609,6 +1735,7 @@ async function doLogin(){
   checkAlerts();
   renderLogin();
   syncThemeBtn();
+  setTimeout(checkRecordatorios, 1500);
   // Mostrar botón de notas
   const nb=document.getElementById('notas-btn');
   if(nb) nb.style.display='flex';
@@ -1638,15 +1765,36 @@ function logout(){
 // ══════════════════════════════════════════
 function checkAlerts(){
   const mc=activos(myC());
+  const allAct=activos(cases); // todos los casos del área
   const hoy=mc.filter(needsRespHoy).length;
   const rev=mc.filter(c=>REVISION_AREA.has(c.subestado)&&diasUA(c)>=2).length;
   const sinLider=cu.id==='jose'?activos(cases).filter(c=>!c.lider||c.lider==='').length:0;
+  const inactivos=mc.filter(c=>diasUA(c)>=15&&c.subestado!=='Finalizado').length;
+
+  // SA: casos con datos del usuario vencidos (+5 días en espera de datos)
+  const saDatosVencidos=allAct.filter(c=>
+    c.solucion==='Solicitud de conciliación'&&
+    (c.subestado==='SA: esperando datos del usuario (1er aviso)'||c.subestado==='SA: esperando datos del usuario (2do aviso)')&&
+    diasUA(c)>=5
+  ).length;
+
+  // SA: casos con +15 días TOTAL → alerta crítica (visibles para todos)
+  const saCriticos=allAct.filter(c=>
+    c.solucion==='Solicitud de conciliación'&&
+    c.subestado!=='Finalizado'&&
+    dias(c.fecha)>=15
+  );
+
   const bar=document.getElementById('alertbar');
-  if(hoy>0||rev>0||sinLider>0){
-    let msg=[];
-    if(hoy>0) msg.push(`<span>${hoy} caso${hoy>1?'s':''}</span> ${hoy>1?'requieren':'requiere'} respuesta hoy (plazo de 3 días vencido)`);
-    if(rev>0) msg.push(`<span>${rev} caso${rev>1?'s':''}</span> llevan +2 días en revisión del área — ¡revísalos!`);
-    if(sinLider>0) msg.push(`<span style="cursor:pointer;text-decoration:underline" onclick="sf('sinlider');sw('casos')">👤 ${sinLider} caso${sinLider>1?'s':''} sin líder asignado</span>`);
+  let msg=[];
+  if(hoy>0) msg.push(`<span>${hoy} caso${hoy>1?'s':''}</span> ${hoy>1?'requieren':'requiere'} respuesta hoy (plazo de 3 días vencido)`);
+  if(rev>0) msg.push(`<span>${rev} caso${rev>1?'s':''}</span> llevan +2 días en revisión del área — ¡revísalos!`);
+  if(inactivos>0) msg.push(`<span style="cursor:pointer;text-decoration:underline;color:var(--pur)" onclick="sf('criticos');sw('casos')">🔕 ${inactivos} caso${inactivos>1?'s':''} sin actividad +15 días</span>`);
+  if(saDatosVencidos>0) msg.push(`<span style="color:var(--gold)">📋 ${saDatosVencidos} SA esperando datos del usuario +5 días — notificar al líder</span>`);
+  if(saCriticos.length>0) msg.push(`<span style="cursor:pointer;font-weight:700;color:var(--red)" onclick="window.open('https://zippy-truffle-8ba810.netlify.app','_blank')">🚨 ${saCriticos.length} SA con +15 días — RADICAR YA → Abrir generador</span>`);
+  if(sinLider>0) msg.push(`<span style="cursor:pointer;text-decoration:underline" onclick="sf('sinlider');sw('casos')">👤 ${sinLider} caso${sinLider>1?'s':''} sin líder asignado</span>`);
+
+  if(msg.length>0){
     bar.innerHTML='⚠️ &nbsp;'+msg.join(' &nbsp;·&nbsp; ');
     bar.style.display='flex';
   } else {bar.style.display='none';}
@@ -1750,12 +1898,18 @@ const ESTADOS_ESPERANDO=new Set([
   'Se necesita información del usuario (segundo aviso)',
   'Esperando notificación por Teams',
   'Aprobado por el area (a espera de carga de documentos en Emma)',
+  'SA: esperando prueba de envío al usuario',
+  'SA: esperando datos del usuario (1er aviso)',
+  'SA: esperando datos del usuario (2do aviso)',
 ]);
 
 function getBandejaMsg(c){
   const n=c.estudiante.split(' ').slice(0,2).join(' ');
   const s=c.subestado;
   if(s==='Esperando notificación por Teams') return PROFORMAS.notificacion(c.id,n);
+  if(s==='SA: esperando prueba de envío al usuario') return PROFORMAS.sa_recordar_prueba(c.id,n);
+  if(s==='SA: esperando datos del usuario (1er aviso)') return PROFORMAS.sa_segundo_aviso_datos(c.id,n,c.usuario);
+  if(s==='SA: esperando datos del usuario (2do aviso)') return PROFORMAS.sa_segundo_aviso_datos(c.id,n,c.usuario);
   if(s.includes('respuesta de estudiante (primer')) return PROFORMAS.espera_resp_1(c.id,n);
   if(s.includes('respuesta de estudiante (segundo')) return PROFORMAS.espera_resp_2(c.id,n);
   if(s.includes('documento del estudiante (primer')) return PROFORMAS.espera_doc_1(c.id,n);
@@ -1950,7 +2104,7 @@ function renderTeamsReview(){
         </div>
         <div>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <span style="font-size:11px;font-weight:500">${c.estudiante}</span>
+            <span style="font-size:11px;font-weight:500;cursor:pointer;text-decoration:underline dotted;color:var(--txt)" onclick="event.stopPropagation();verPerfilEstudiante('${c.estudiante}')" title="Ver historial del estudiante">${c.estudiante}</span>
             ${c.estudianteAnterior?`<span style="font-size:9px;background:rgba(155,89,255,.15);color:var(--pur);border:1px solid rgba(155,89,255,.3);border-radius:4px;padding:1px 5px;white-space:nowrap" title="Antes: ${c.estudianteAnterior}">🔄 Reasignado</span>`:''}
           </div>
           <div style="font-size:10px;color:var(--mut)">${c.usuario||'—'}</div>
@@ -2722,6 +2876,11 @@ function scf(f){
 }
 
 function openAddCompromiso(){
+  _compEditId=null;
+  document.getElementById('comp-modal-title').textContent='Registrar carta';
+  document.getElementById('comp-modal-btn').textContent='Registrar carta';
+  document.getElementById('comp-modal-btn').onclick=saveComp;
+  document.getElementById('c-rad').readOnly=false;
   document.getElementById('c-rad').value='';
   document.getElementById('c-est').value='';
   document.getElementById('c-motivo').value='';
@@ -2788,7 +2947,7 @@ function renderCompromisos(){
   el.innerHTML=list.map(c=>{
     const r=respMap[c.resp]||{lbl:c.resp,col:'var(--mut)'};
     const tipoColor=c.tipo==='abandono'?{bg:'rgba(255,51,85,.1)',col:'#ff3355'}:{bg:'rgba(240,165,0,.1)',col:'#f0a500'};
-    return `<div class="tr2" style="grid-template-columns:110px 180px 160px 110px 110px 110px 120px;cursor:default">
+    return `<div class="tr2" style="grid-template-columns:110px 180px 160px 110px 110px 110px 120px 56px;cursor:default">
       <span class="rad">${c.rad}</span>
       <span style="font-size:11px;font-weight:500">${c.est}</span>
       <span style="font-size:11px;color:var(--mut)">${c.motivo||'—'}</span>
@@ -2799,6 +2958,10 @@ function renderCompromisos(){
         <select class="fsel" style="padding:3px 7px;font-size:10px;width:100%" onchange="updateCompResp(${c.id},this.value)">
           ${Object.entries(respMap).map(([k,v])=>`<option value="${k}"${k===c.resp?' selected':''}>${v.lbl}</option>`).join('')}
         </select>
+      </span>
+      <span style="display:flex;gap:4px">
+        <button class="actbtn" onclick="editarComp(${c.id})" title="Editar" style="padding:3px 6px">✏️</button>
+        <button class="actbtn" onclick="eliminarComp(${c.id})" title="Eliminar" style="padding:3px 6px;color:var(--red)">🗑</button>
       </span>
     </div>`;
   }).join('');
@@ -2811,6 +2974,59 @@ async function updateCompResp(id,val){
     await updateCompRespDB(id,val);
     showToast('✅ Estado actualizado');
   }
+}
+
+let _compEditId=null;
+
+function editarComp(id){
+  const c=compromisos.find(x=>x.id===id);
+  if(!c) return;
+  _compEditId=id;
+  document.getElementById('comp-modal-title').textContent='Editar carta';
+  document.getElementById('comp-modal-btn').textContent='Guardar cambios';
+  document.getElementById('comp-modal-btn').onclick=guardarEditComp;
+  document.getElementById('c-rad').value=c.rad;
+  document.getElementById('c-rad').readOnly=true;
+  document.getElementById('c-est').value=c.est;
+  document.getElementById('c-tipo').value=c.tipo;
+  document.getElementById('c-fec').value=c.fec||'';
+  document.getElementById('c-motivo').value=c.motivo||'';
+  document.getElementById('c-resp').value=c.resp||'pendiente';
+  document.getElementById('c-por').value=c.por||'';
+  document.getElementById('mod-comp').classList.add('open');
+}
+
+async function guardarEditComp(){
+  if(!_compEditId) return;
+  const c=compromisos.find(x=>x.id===_compEditId);
+  if(!c) return;
+  c.est=document.getElementById('c-est').value.trim().toUpperCase();
+  c.tipo=document.getElementById('c-tipo').value;
+  c.fec=document.getElementById('c-fec').value;
+  c.motivo=document.getElementById('c-motivo').value.trim();
+  c.resp=document.getElementById('c-resp').value;
+  c.por=document.getElementById('c-por').value.trim();
+  await sb.from('compromisos').update({
+    est:c.est, tipo:c.tipo, fec:c.fec,
+    motivo:c.motivo, resp:c.resp, por:c.por
+  }).eq('id',_compEditId);
+  _compEditId=null;
+  // Restaurar modal a modo registro
+  document.getElementById('comp-modal-title').textContent='Registrar carta';
+  document.getElementById('comp-modal-btn').textContent='Registrar carta';
+  document.getElementById('comp-modal-btn').onclick=saveComp;
+  document.getElementById('c-rad').readOnly=false;
+  cm('mod-comp');
+  renderCompromisos();
+  showToast('✅ Carta actualizada');
+}
+
+async function eliminarComp(id){
+  if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  await sb.from('compromisos').delete().eq('id',id);
+  compromisos=compromisos.filter(c=>c.id!==id);
+  renderCompromisos();
+  showToast('🗑 Registro eliminado');
 }
 
 function sf(f){
@@ -2968,7 +3184,16 @@ function openAcc(id){
   }
   // Instrucciones automáticas para primer documento
   const instr=getInstrucciones(c.solucion);
-  if(instr&&(c.subestado==='A espera de respuesta de estudiante (primer aviso)'||c.subestado==='Esperando notificación por Teams')){
+  if(c.solucion==='Solicitud de conciliación'&&(c.subestado==='Esperando notificación por Teams')){
+    const msgSA=PROFORMAS.sa_notif_estudiante(c.id,c.estudiante.split(' ').slice(0,2).join(' '),c.usuario);
+    alertHtml+=`<div style="background:rgba(155,89,255,.08);border:1px solid rgba(155,89,255,.25);border-radius:8px;padding:10px 14px;margin-bottom:4px;font-size:11px;color:var(--pur);font-weight:600">
+      📢 Mensaje para el estudiante — incluye instrucción con el texto para el usuario
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:12px;font-size:11px;white-space:pre-wrap;line-height:1.7;color:var(--txt);position:relative">
+      <button class="copybtn" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent).then(()=>showToast('✅ Copiado'))">Copiar</button>
+      <span>${msgSA}</span>
+    </div>`;
+  } else if(instr&&(c.subestado==='A espera de respuesta de estudiante (primer aviso)'||c.subestado==='Esperando notificación por Teams')){
     alertHtml+=`<div style="background:rgba(0,201,122,.08);border:1px solid rgba(0,201,122,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--grn);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
       📋 <strong>Ver instrucciones para ${c.solucion}</strong> (clic para expandir)
     </div>
@@ -2983,9 +3208,18 @@ function openAcc(id){
   let relevant=ACCIONES;
   const esSA = c.solucion==='Solicitud de conciliación';
 
-  if(c.subestado==='Esperando notificación por Teams')
+  if(c.subestado==='Esperando notificación por Teams'&&esSA)
+    relevant=ACCIONES.filter(a=>['respondio','notificacion','reasignar'].includes(a.id))
+      .map(a=>a.id==='respondio'?{...a,label:'📢 Caso notificado al usuario — avanzar',icon:'📢'}:a);
+  else if(c.subestado==='Esperando notificación por Teams')
     relevant=ACCIONES.filter(a=>['respondio','notificacion','reasignar'].includes(a.id))
       .map(a=>a.id==='respondio'?{...a,label:'📢 Notificó el caso',icon:'📢'}:a);
+  else if(c.subestado==='SA: esperando prueba de envío al usuario')
+    relevant=ACCIONES.filter(a=>['sa_prueba_si','sa_prueba_no','reasignar'].includes(a.id));
+  else if(c.subestado==='SA: esperando datos del usuario (1er aviso)')
+    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_segundo_aviso','sa_desestimiento'].includes(a.id));
+  else if(c.subestado==='SA: esperando datos del usuario (2do aviso)')
+    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_desestimiento'].includes(a.id));
   else if(c.subestado.includes('respuesta de estudiante'))
     relevant=ACCIONES.filter(a=>['respondio','sin_resp_1','sin_resp_2','reasignar'].includes(a.id));
   else if(c.subestado.includes('documento del estudiante'))
@@ -3536,9 +3770,16 @@ async function saveAcc(){
       else if(selAcc==='sa_desestimiento') c.subestado='Finalizado';
       else if(selAcc==='sa_jose_firmo') c.subestado='Carpeta creada donde Cris';
       else if(selAcc==='sa_centro_acepto') c.subestado='Finalizado';
+      // SA nuevas
+      else if(selAcc==='sa_prueba_si') c.subestado='SA: esperando datos del usuario (1er aviso)';
+      else if(selAcc==='sa_prueba_no') c.subestado='SA: esperando prueba de envío al usuario'; // se queda + proforma
+      else if(selAcc==='sa_datos_completos') c.subestado='En revision de area';
+      else if(selAcc==='sa_segundo_aviso') c.subestado='SA: esperando datos del usuario (2do aviso)';
       else if(selAcc==='respondio'){
+        const esSAResp=cases.find(x=>x.id===caseId)?.solucion==='Solicitud de conciliación';
         const map={
-          'Esperando notificación por Teams':'A espera de respuesta de estudiante (primer aviso)',
+          'Esperando notificación por Teams': esSAResp?'SA: esperando prueba de envío al usuario':'A espera de respuesta de estudiante (primer aviso)',
+          'SA: esperando prueba de envío al usuario':'SA: esperando datos del usuario (1er aviso)',
           'A espera de respuesta de estudiante (primer aviso)':'Se espera documento del estudiante (primer aviso)',
           'A espera de respuesta de estudiante (segundo aviso)':'Se espera documento del estudiante (primer aviso)',
           'Se espera documento del estudiante (primer aviso)':'En revision de area',
@@ -3716,7 +3957,7 @@ function renderHist(){
 //  HELPERS
 // ══════════════════════════════════════════
 function cm(id){document.getElementById(id).classList.remove('open');}
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function showToast(m,dur=3000){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function renderAll(){renderStats();render();}
 
 // ══════════════════════════════════════════
@@ -3972,6 +4213,7 @@ function renderAnalitica(){
   lf.innerHTML='<option value="">Todos los líderes</option>'+USERS.filter(u=>u.id!=='jose').map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
 
   renderFinTable(fin);
+  renderComparativoPeriodos(cases);
 }
 
 function setAnPeriodo(p){
@@ -4009,6 +4251,42 @@ function renderFinTable(finList){
 // ══════════════════════════════════════════
 //  EXPORT PDF (print)
 // ══════════════════════════════════════════
+function exportCompromisosPDF(){
+  const total=compromisos.length;
+  const comp=compromisos.filter(c=>c.tipo==='compromiso').length;
+  const aban=compromisos.filter(c=>c.tipo==='abandono').length;
+  const pend=compromisos.filter(c=>c.resp==='pendiente').length;
+  const resp=compromisos.filter(c=>c.resp==='respondio').length;
+  const noResp=compromisos.filter(c=>c.resp==='no_respondio').length;
+
+  const rows=compromisos.map(c=>`<tr>
+    <td>${c.rad}</td>
+    <td>${c.est}</td>
+    <td><span style="color:${c.tipo==='abandono'?'#c0392b':'#d4870a'};font-weight:600">${c.tipo==='abandono'?'🔴 Abandono':'⚠️ Compromiso'}</span></td>
+    <td>${c.fec||'—'}</td>
+    <td>${c.motivo||'—'}</td>
+    <td>${c.por||'—'}</td>
+    <td><span style="color:${c.resp==='respondio'?'#27ae60':c.resp==='no_respondio'?'#c0392b':'#d4870a'}">${c.resp==='respondio'?'✅ Respondió':c.resp==='no_respondio'?'❌ No respondió':c.resp==='reasignado'?'🔄 Reasignado':'⏳ Pendiente'}</span></td>
+  </tr>`).join('');
+
+  const w=window.open('','_blank');
+  const ST='<'+'style'+'>';const SE='</'+'style'+'>';
+  const SCR='<'+'script'+'>';const SCRE='</'+'script'+'>';
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe Cartas</title>`
+    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:20px;font-weight:800;color:#9b59ff;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:24px}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:12px 14px;border-top:3px solid #9b59ff}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}.kpi-val{font-size:22px;font-weight:800;color:#9b59ff}.kpi-sub{font-size:10px;color:#888;margin-top:2px}h2{font-size:14px;font-weight:700;margin:20px 0 10px;color:#1a1a2e;border-bottom:2px solid #9b59ff;padding-bottom:6px}table{width:100%;border-collapse:collapse}th{background:#9b59ff;color:#fff;padding:7px 10px;text-align:left;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px}.footer{margin-top:28px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px}@media print{body{padding:16px}}`+SE
+    +`</head><body>`
+    +`<h1>Cartas de Compromiso y Abandono</h1>`
+    +`<div class="sub">Consultorio Jurídico CUC · Generado el ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · Por ${cu.name}</div>`
+    +`<div class="kpis"><div class="kpi"><div class="kpi-label">Total</div><div class="kpi-val">${total}</div><div class="kpi-sub">Cartas registradas</div></div><div class="kpi"><div class="kpi-label">Compromiso</div><div class="kpi-val" style="color:#d4870a">${comp}</div><div class="kpi-sub">${total?Math.round(comp/total*100):0}% del total</div></div><div class="kpi"><div class="kpi-label">Abandono</div><div class="kpi-val" style="color:#c0392b">${aban}</div><div class="kpi-sub">${total?Math.round(aban/total*100):0}% del total</div></div><div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val" style="color:#d4870a">${pend}</div><div class="kpi-sub">Sin respuesta</div></div><div class="kpi"><div class="kpi-label">Respondieron</div><div class="kpi-val" style="color:#27ae60">${resp}</div><div class="kpi-sub">${total?Math.round(resp/total*100):0}% respondió</div></div></div>`
+    +`<h2>Detalle de cartas</h2>`
+    +`<table><thead><tr><th>Radicado</th><th>Estudiante</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Enviada por</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table>`
+    +`<div class="footer">Área Comercial · Consultorio Jurídico CUC · ${new Date().getFullYear()}</div>`
+    +SCR+`window.onload=()=>window.print()`+SCRE
+    +`</body></html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
 function exportPDF(){
   const fin=cases.filter(c=>c.subestado==='Finalizado');
   const act=cases.filter(c=>c.subestado!=='Finalizado');
@@ -4050,25 +4328,25 @@ function exportPDF(){
   const ST='<'+'style'+'>';const SE='</'+'style'+'>';
   const SCR='<'+'script'+'>';const SCRE='</'+'script'+'>';
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe AC</title>`
-    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.charts-pair{display:flex;gap:16px;margin-bottom:24px}.charts-pair>div{flex:1}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}@media print{body{padding:18px}}`+SE
+    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.charts-pair{display:flex;gap:16px;margin-bottom:24px}.charts-pair>div{flex:1}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}.chart-block{margin-bottom:24px}.chart-title{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}.chart-block img{width:100%;border-radius:8px;background:#f8f8fc;padding:8px}@media print{body{padding:18px}.nueva-pagina{page-break-before:always}.chart-block{page-break-inside:avoid}.charts-pair{page-break-inside:avoid}}`+SE
     +`</head><body>`
     +`<h1>Área Comercial · Informe de Gestión</h1>`
     +`<div class="sub">Consultorio Jurídico CUC · Generado el ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · Por ${cu.name}</div>`
     +`<div class="kpis"><div class="kpi"><div class="kpi-label">Total casos</div><div class="kpi-val">${total}</div><div class="kpi-sub">Período 2026-1</div></div><div class="kpi"><div class="kpi-label">Finalizados</div><div class="kpi-val" style="color:#00c97a">${fin.length}</div><div class="kpi-sub">${pct}% de finalización</div></div><div class="kpi"><div class="kpi-label">En curso</div><div class="kpi-val" style="color:#3d8eff">${act.length}</div><div class="kpi-sub">Casos activos</div></div><div class="kpi"><div class="kpi-label">Tiempo promedio</div><div class="kpi-val" style="color:#f0a500">${avgDur}d</div><div class="kpi-sub">Ingreso → cierre</div></div></div>`
-    +`<h2>Distribución por tipo de solución</h2><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>% del total</th></tr></thead><tbody>${tipoRows}</tbody></table>`
-    +`<h2>Rendimiento por líder</h2><table><thead><tr><th>Líder</th><th>Total</th><th>Finalizados</th><th>Activos</th></tr></thead><tbody>${liderRows}</tbody></table>`
-    +`<h2>Gráficas de analítica</h2>`
-    // Tipo y Donut lado a lado
-    +`<div class="charts-pair">`
-    +`<div><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-tipo']}</div><img src="${(()=>{const c=document.getElementById('ch-tipo');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
-    +`<div><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-donut']}</div><img src="${(()=>{const c=document.getElementById('ch-donut');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
-    +`</div>`
-    // Líderes ancho completo
-    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-lider']}</div><img src="${(()=>{const c=document.getElementById('ch-lider');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
-    // Evolución mensual ancho completo
-    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-mes']}</div><img src="${(()=>{const c=document.getElementById('ch-mes');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
-    // Correcciones ancho completo
-    +`<div style="margin-bottom:24px"><div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">${chartTitles['ch-corr']}</div><img src="${(()=>{const c=document.getElementById('ch-corr');return c?c.toDataURL('image/png'):'';})()}" style="width:100%;border-radius:8px;background:#f8f8fc;padding:8px"></div>`
+    // Página 2 — tablas
+    +`<div class="nueva-pagina"><h2>Distribución por tipo de solución</h2><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>% del total</th></tr></thead><tbody>${tipoRows}</tbody></table></div>`
+    +`<div class="nueva-pagina"><h2>Rendimiento por líder</h2><table><thead><tr><th>Líder</th><th>Total</th><th>Finalizados</th><th>Activos</th></tr></thead><tbody>${liderRows}</tbody></table></div>`
+    // Página 3 — tipo + donut
+    +`<div class="nueva-pagina"><h2>Gráficas de analítica</h2><div class="charts-pair">`
+    +`<div class="chart-block"><div class="chart-title">${chartTitles['ch-tipo']}</div><img src="${(()=>{const c=document.getElementById('ch-tipo');return c?c.toDataURL('image/png'):'';})()}"></div>`
+    +`<div class="chart-block"><div class="chart-title">${chartTitles['ch-donut']}</div><img src="${(()=>{const c=document.getElementById('ch-donut');return c?c.toDataURL('image/png'):'';})()}"></div>`
+    +`</div></div>`
+    // Página 4 — líderes
+    +`<div class="nueva-pagina chart-block"><div class="chart-title">${chartTitles['ch-lider']}</div><img src="${(()=>{const c=document.getElementById('ch-lider');return c?c.toDataURL('image/png'):'';})()}"></div>`
+    // Página 5 — evolución mensual
+    +`<div class="nueva-pagina chart-block"><div class="chart-title">${chartTitles['ch-mes']}</div><img src="${(()=>{const c=document.getElementById('ch-mes');return c?c.toDataURL('image/png'):'';})()}"></div>`
+    // Página 6 — correcciones
+    +`<div class="nueva-pagina chart-block"><div class="chart-title">${chartTitles['ch-corr']}</div><img src="${(()=>{const c=document.getElementById('ch-corr');return c?c.toDataURL('image/png'):'';})()}"></div>`
     +`<div class="footer">Área Comercial · Consultorio Jurídico CUC · ${new Date().getFullYear()}</div>`
     +SCR+`window.onload=()=>window.print()`+SCRE
     +`</body></html>`;
@@ -4089,6 +4367,8 @@ function startRealtime(){
   const txt=document.getElementById('sync-txt');
   if(dot) dot.style.background='#00c97a';
   if(txt) txt.textContent='En vivo';
+  startNotasRealtime();
+  loadNotas().then(()=>actualizarBadge());
 
   syncInterval=setInterval(async()=>{
     try{
@@ -4121,8 +4401,13 @@ function startRealtime(){
             }
           } else {
             // Caso nuevo — solo notificar si apareció DESPUÉS de iniciar sesión
+            let estSync=r.estudiante||'';
+            if(estSync&&(!estSync.includes(' ')||estSync.includes('@'))){
+              const mSync=getEstudianteByUsuario(estSync.replace('@cuc.edu.co',''));
+              if(mSync) estSync=mSync.nombre;
+            }
             cases.push({
-              id:r.id, estudiante:r.estudiante, lider:r.lider||'',
+              id:r.id, estudiante:estSync, lider:r.lider||'',
               solucion:r.solucion, subestado:r.subestado, fecha:r.fecha,
               periodo:r.periodo||'2026-1', correcciones:r.correcciones||0,
               fechaUltimaAccion:r.fecha_ultima_accion||r.fecha,
@@ -4324,8 +4609,8 @@ function renderDirectorio(){
       <div id="dir-duplicados" style="display:none;margin-bottom:14px;background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3);border-radius:10px;padding:12px 16px"></div>
       <div style="font-size:11px;color:var(--mut);margin-bottom:10px" id="dir-count"></div>
       <div class="tbl">
-        <div class="th" style="grid-template-columns:2fr 1.2fr 2fr 1fr 80px">
-          <span>Nombre completo</span><span>Usuario</span><span>Correo</span><span>Programa</span><span></span>
+        <div class="th" style="grid-template-columns:2fr 1.2fr 2fr 1fr 60px 80px">
+          <span>Nombre completo</span><span>Usuario</span><span>Correo</span><span>Programa</span><span>Cons.</span><span></span>
         </div>
         <div id="dir-list"></div>
       </div>`;
@@ -4338,11 +4623,13 @@ function renderDirectorio(){
     const idx=DIRECTORIO.indexOf(d);
     const progColor=d.programa==='Virtual'?'var(--pur)':'var(--blu)';
     const usuario=d.usuario||_u(d.correo);
-    return `<div class="tr2" style="grid-template-columns:2fr 1.2fr 2fr 1fr 80px">
+    const consLabel=d.consultorio?`<span style="font-size:10px;font-weight:600;color:var(--acc)">${d.consultorio}</span>`:`<span style="color:var(--bd)">—</span>`;
+    return `<div class="tr2" style="grid-template-columns:2fr 1.2fr 2fr 1fr 60px 80px">
       <span style="font-size:12px;font-weight:500">${d.nombre}</span>
       <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--acc)">${usuario}</span>
       <span style="font-size:11px;color:var(--mut)">${d.correo}</span>
       <span><span style="font-size:10px;border:1px solid ${progColor};color:${progColor};border-radius:5px;padding:2px 7px">${d.programa||'—'}</span></span>
+      <span style="text-align:center">${consLabel}</span>
       <span style="display:flex;gap:4px">
         <button class="actbtn" onclick="editarEst(${idx})" title="Editar" style="padding:3px 6px">✏️</button>
         <button class="actbtn" onclick="eliminarEst(${idx})" title="Eliminar" style="padding:3px 6px;color:var(--red)">✕</button>
@@ -4397,6 +4684,7 @@ function abrirModalNuevoEst(){
   document.getElementById('nest-usuario').value='';
   delete document.getElementById('nest-usuario').dataset.manual;
   document.getElementById('nest-prog').value='Presencial';
+  document.getElementById('nest-cons').value='';
   document.getElementById('mod-nuevo-est').style.display='flex';
 }
 
@@ -4410,6 +4698,7 @@ function editarEst(idx){
   u.value=d.usuario||_u(d.correo);
   u.dataset.manual='1';
   document.getElementById('nest-prog').value=d.programa||'Presencial';
+  document.getElementById('nest-cons').value=d.consultorio||'';
   document.getElementById('mod-nuevo-est').style.display='flex';
 }
 
@@ -4418,11 +4707,12 @@ function guardarNuevoEst(){
   const correo=document.getElementById('nest-correo').value.trim().toLowerCase();
   const usuario=document.getElementById('nest-usuario').value.trim().toLowerCase()||_u(correo);
   const programa=document.getElementById('nest-prog').value;
+  const consultorio=document.getElementById('nest-cons').value;
   if(!nombre||!correo){showToast('⚠️ Nombre y correo son obligatorios');return;}
   if(nestEditIdx>=0){
-    DIRECTORIO[nestEditIdx]={nombre,correo,usuario,programa};
+    DIRECTORIO[nestEditIdx]={nombre,correo,usuario,programa,consultorio};
   } else {
-    DIRECTORIO.push({nombre,correo,usuario,programa});
+    DIRECTORIO.push({nombre,correo,usuario,programa,consultorio});
   }
   saveDirectorio();
   document.getElementById('mod-nuevo-est').style.display='none';
@@ -4457,9 +4747,37 @@ function importarDirectorioExcel(file){
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      procesarFilasDirectorio(rows);
-    }catch(err){showToast('❌ Error al leer el archivo');}
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // Detectar si es formato Emma (buscar fila con "Nombre" y "Correo Institucional")
+      let nombreCol=-1, correoCol=-1, headerRowIdx=-1;
+      for(let i=0;i<Math.min(raw.length,25);i++){
+        const row=raw[i];
+        for(let j=0;j<row.length;j++){
+          const v=String(row[j]||'').trim();
+          if(v==='Nombre') nombreCol=j;
+          if(v==='Correo Institucional') correoCol=j;
+        }
+        if(nombreCol>=0&&correoCol>=0){headerRowIdx=i;break;}
+      }
+
+      if(headerRowIdx>=0&&nombreCol>=0&&correoCol>=0){
+        // Formato Emma — leer por posición de columna
+        const filas=[];
+        for(let i=headerRowIdx+1;i<raw.length;i++){
+          const row=raw[i];
+          const nombre=String(row[nombreCol]||'').trim().toUpperCase();
+          const correo=String(row[correoCol]||'').trim().toLowerCase();
+          if(nombre&&correo&&correo.includes('@'))
+            filas.push({NOMBRE:nombre,CORREO:correo});
+        }
+        procesarFilasDirectorio(filas);
+      } else {
+        // Formato estándar con cabeceras nombradas
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+        procesarFilasDirectorio(rows);
+      }
+    }catch(err){showToast('❌ Error al leer el archivo: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
 }
@@ -4515,6 +4833,99 @@ async function importarDirectorioPDF(file){
   }catch(err){showToast('❌ Error procesando PDF: '+err.message);}
 }
 
+// ══════════════════════════════════════════
+//  RECORDATORIOS
+// ══════════════════════════════════════════
+const REC_KEY='ac_recordatorios_v1';
+function loadRecs(){try{return JSON.parse(localStorage.getItem(REC_KEY)||'[]');}catch(e){return[];}}
+function saveRecs(r){try{localStorage.setItem(REC_KEY,JSON.stringify(r));}catch(e){}}
+let _recCaseId=null;
+function abrirRecordatorio(id){
+  _recCaseId=id;
+  const c=cases.find(x=>x.id===id);
+  document.getElementById('rec-rad').textContent=id+(c?' · '+c.estudiante:'');
+  document.getElementById('rec-nota').value='';
+  const m=new Date();m.setDate(m.getDate()+1);
+  document.getElementById('rec-fecha').value=m.toISOString().split('T')[0];
+  document.getElementById('mod-recordatorio').classList.add('open');
+}
+function setRecDias(d){
+  const f=new Date();f.setDate(f.getDate()+d);
+  document.getElementById('rec-fecha').value=f.toISOString().split('T')[0];
+}
+function guardarRecordatorio(){
+  const fecha=document.getElementById('rec-fecha').value;
+  const nota=document.getElementById('rec-nota').value.trim();
+  if(!fecha){showToast('⚠️ Elige una fecha');return;}
+  const recs=loadRecs();
+  recs.push({id:Date.now(),caseId:_recCaseId,fecha,nota,hecho:false,user:cu.id});
+  saveRecs(recs);
+  cm('mod-recordatorio');
+  showToast('⏰ Recordatorio guardado para el '+fecha);
+}
+function checkRecordatorios(){
+  const hoy=new Date().toISOString().split('T')[0];
+  const recs=loadRecs().filter(r=>!r.hecho&&r.fecha<=hoy&&r.user===cu?.id);
+  recs.forEach(r=>{
+    const c=cases.find(x=>x.id===r.caseId);
+    showToast(`⏰ Recordatorio: ${r.caseId}${c?' — '+c.estudiante.split(' ')[0]:''}${r.nota?' | '+r.nota:''}`,6000);
+  });
+}
+
+// ══════════════════════════════════════════
+//  PERFIL DE ESTUDIANTE
+// ══════════════════════════════════════════
+function verPerfilEstudiante(nombre){
+  const d=DIRECTORIO.find(e=>e.nombre===nombre)||
+    DIRECTORIO.find(e=>nombre.includes(e.nombre.split(' ')[0])&&nombre.includes(e.nombre.split(' ')[1]||'XX'));
+  const casosEst=[...cases].filter(c=>c.estudiante===nombre||c.usuario===nombre);
+  const actEst=casosEst.filter(c=>c.subestado!=='Finalizado');
+  const finEst=casosEst.filter(c=>c.subestado==='Finalizado');
+  document.getElementById('ep-nombre').textContent=nombre;
+  document.getElementById('ep-info').innerHTML=
+    (d?`${d.correo} · ${d.programa}`:'Sin correo registrado')+
+    ` · <span style="color:var(--grn)">${finEst.length} finalizado${finEst.length!==1?'s':''}</span>`+
+    (actEst.length?` · <span style="color:var(--gold)">${actEst.length} activo${actEst.length!==1?'s':''}</span>`:'');
+  document.getElementById('ep-body').innerHTML=casosEst.length===0
+    ?`<div style="color:var(--mut);text-align:center;padding:20px">Sin casos registrados</div>`
+    :casosEst.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(c=>{
+      const fin=c.subestado==='Finalizado';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)">
+        <span class="rad">${c.id}</span>
+        <span style="flex:1;font-size:11px;color:var(--mut)">${c.solucion}</span>
+        <span style="font-size:10px;color:var(--mut)">${c.fecha}</span>
+        <span style="font-size:11px;font-weight:600;color:${fin?'var(--grn)':'var(--gold)'}">${fin?'✓ Finalizado':c.subestado.split('(')[0].trim().slice(0,20)}</span>
+      </div>`;
+    }).join('');
+  document.getElementById('mod-est-perfil').classList.add('open');
+}
+
+// ══════════════════════════════════════════
+//  COMPARATIVO DE PERÍODOS
+// ══════════════════════════════════════════
+function renderComparativoPeriodos(allCases){
+  const el=document.getElementById('comp-periodos');
+  if(!el) return;
+  const periodos=[...new Set(allCases.map(c=>c.periodo).filter(Boolean))].sort();
+  if(periodos.length<2){el.innerHTML=`<div style="color:var(--mut);font-size:11px;padding:12px 0;text-align:center">Disponible cuando haya 2 períodos con datos</div>`;return;}
+  const p1=periodos[periodos.length-2], p2=periodos[periodos.length-1];
+  const kpi=p=>{
+    const cc=allCases.filter(c=>c.periodo===p);
+    const fin=cc.filter(c=>c.subestado==='Finalizado');
+    const durs=fin.filter(f=>f.fechaUltimaAccion).map(f=>Math.max(0,Math.floor((new Date(f.fechaUltimaAccion)-new Date(f.fecha))/86400000)));
+    const avg=durs.length?Math.round(durs.reduce((a,b)=>a+b,0)/durs.length):0;
+    return {total:cc.length,fin:fin.length,pct:cc.length?Math.round(fin.length/cc.length*100):0,avg,corrs:cc.reduce((a,c)=>a+(c.correcciones||0),0)};
+  };
+  const k1=kpi(p1),k2=kpi(p2);
+  const diff=(a,b,inv=false)=>{const d=b-a;if(!d)return`<span style="color:var(--mut)">—</span>`;const ok=inv?d<0:d>0;return`<span style="font-weight:700;color:${ok?'var(--grn)':'var(--red)'}">${d>0?'+':''}${d}</span>`;};
+  const rows=[['Total casos',k1.total,k2.total,false],['Finalizados',k1.fin,k2.fin,false],['% finalización',k1.pct+'%',k2.pct+'%',false,k2.pct-k1.pct],['Tiempo promedio (días)',k1.avg,k2.avg,true],['Total correcciones',k1.corrs,k2.corrs,true]];
+  el.innerHTML=`<div class="an-ctitle">Comparativo ${p1} vs ${p2}</div>
+    <div style="font-size:11px">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--bd);padding:5px 0;color:var(--mut)"><span>Métrica</span><span style="text-align:center">${p1}</span><span style="text-align:center">${p2}</span><span style="text-align:center">Δ</span></div>
+      ${rows.map(([lbl,v1,v2,inv,dv])=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0;padding:7px 0;border-bottom:1px solid var(--bd);align-items:center"><span style="color:var(--txt)">${lbl}</span><span style="text-align:center;font-family:'DM Mono',monospace;color:var(--mut)">${v1}</span><span style="text-align:center;font-family:'DM Mono',monospace;font-weight:600">${v2}</span><span style="text-align:center">${diff(typeof v1==='number'?v1:parseInt(v1),typeof v2==='number'?v2:parseInt(v2),inv)}</span></div>`).join('')}
+    </div>`;
+}
+
 // ── INIT ──
 (async()=>{
   cases=await loadC();
@@ -4523,120 +4934,171 @@ async function importarDirectorioPDF(file){
 })();
 
 // ══════════════════════════════════════════
-//  NOTAS DEL EQUIPO
+//  PIZARRA DEL EQUIPO
 // ══════════════════════════════════════════
 let notasAbiertas=false;
-const NOTAS_KEY='ac_notas_v1';
+let notasCache=[];
+let _destSeleccionado='todos';
 
-function loadNotas(){
-  try{return JSON.parse(localStorage.getItem(NOTAS_KEY)||'[]');}catch(e){return[];}
-}
-function saveNotas(notas){
-  try{localStorage.setItem(NOTAS_KEY,JSON.stringify(notas));}catch(e){}
-}
-
-function toggleNotas(){
-  notasAbiertas=!notasAbiertas;
-  document.getElementById('notas-panel').style.display=notasAbiertas?'flex':'none';
-  if(notasAbiertas){
-    marcarNotasVistas();
-    renderNotas();
-    setTimeout(()=>document.getElementById('nota-txt')?.focus(),100);
-  }
+function selDest(btn){
+  _destSeleccionado=btn.dataset.id;
+  document.querySelectorAll('.dest-chip').forEach(b=>{
+    const activo=b.dataset.id===_destSeleccionado;
+    b.style.background=activo?'var(--acc)':'var(--s3)';
+    b.style.color=activo?'#fff':'var(--txt)';
+    b.style.borderColor=activo?'var(--acc)':'var(--bd)';
+  });
 }
 
-function renderNotas(){
-  const notas=loadNotas();
-  // Filtrar las que van para el usuario actual o para todos
-  const visibles=notas.filter(n=>n.dest==='todos'||n.dest===cu?.id||n.from===cu?.id)
-    .sort((a,b)=>new Date(a.ts)-new Date(b.ts));
-  const el=document.getElementById('notas-list');
-  if(!el) return;
-  if(visibles.length===0){
-    el.innerHTML=`<div style="text-align:center;color:var(--mut);font-size:12px;padding:20px 0">Sin notas aún</div>`;
-    return;
-  }
-  el.innerHTML=visibles.map(n=>{
-    const esPropia=n.from===cu?.id;
-    const u=gu(n.from);
-    const destLabel=n.dest==='todos'?'todos':gu(n.dest).name.split(' ')[0];
-    const fechaLabel=new Date(n.ts).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return `<div style="display:flex;flex-direction:column;gap:3px;${esPropia?'align-items:flex-end':'align-items:flex-start'}">
-      <div style="font-size:9px;color:var(--mut)">${esPropia?'Tú':'<span style=color:'+u.color+';font-weight:600>'+u.name.split(' ')[0]+'</span>'} → ${destLabel} · ${fechaLabel}</div>
-      <div style="max-width:85%;background:${esPropia?'var(--acc)':'var(--s2)'};color:${esPropia?'#fff':'var(--txt)'};border-radius:${esPropia?'12px 12px 2px 12px':'12px 12px 12px 2px'};padding:8px 11px;font-size:12px;line-height:1.5;border:1px solid ${esPropia?'transparent':'var(--bd)'};word-break:break-word">
-        ${n.texto}
-      </div>
-      ${!esPropia&&!n.visto?`<button onclick="marcarVista('${n.id}')" style="font-size:9px;background:none;border:none;color:var(--mut);cursor:pointer;padding:0">✓ Marcar vista</button>`:''}
-      ${n.visto&&!esPropia?`<span style="font-size:9px;color:var(--grn)">✓ Vista</span>`:''}
-    </div>`;
-  }).join('');
-  el.scrollTop=el.scrollHeight;
-  actualizarBadge();
+async function loadNotas(){
+  try{
+    const{data}=await sb.from('notas_equipo').select('*').order('ts',{ascending:false}).limit(100);
+    notasCache=data||[];
+  }catch(e){notasCache=[];}
 }
 
-function enviarNota(){
+async function enviarNota(){
   const txt=document.getElementById('nota-txt')?.value.trim();
-  const dest=document.getElementById('nota-dest')?.value||'todos';
   if(!txt) return;
-  const notas=loadNotas();
-  notas.push({id:Date.now().toString(),from:cu.id,dest,texto:txt,ts:new Date().toISOString(),visto:false});
-  saveNotas(notas);
   document.getElementById('nota-txt').value='';
-  renderNotas();
+  await sb.from('notas_equipo').insert({
+    from_user:cu.id, dest:_destSeleccionado, texto:txt,
+    ts:new Date().toISOString(), visto_por:[]
+  });
 }
 
-function marcarVista(id){
-  const notas=loadNotas();
-  const n=notas.find(x=>x.id===id);
-  if(n) n.visto=true;
-  saveNotas(notas);
-  renderNotas();
+async function resolverNota(id){
+  await sb.from('notas_equipo').update({visto_por:['resolved']}).eq('id',id);
 }
 
-function marcarNotasVistas(){
-  const notas=loadNotas();
-  notas.forEach(n=>{if((n.dest===cu?.id||n.dest==='todos')&&n.from!==cu?.id) n.visto=true;});
-  saveNotas(notas);
-  actualizarBadge();
+async function marcarNotasVistas(){
+  const sinVer=notasCache.filter(n=>
+    (n.dest===cu?.id||n.dest==='todos')&&n.from_user!==cu?.id&&
+    !(Array.isArray(n.visto_por)&&(n.visto_por.includes(cu.id)||n.visto_por.includes('resolved')))
+  );
+  for(const n of sinVer){
+    const visto=Array.isArray(n.visto_por)?n.visto_por:[];
+    if(!visto.includes(cu.id))
+      await sb.from('notas_equipo').update({visto_por:[...visto,cu.id]}).eq('id',n.id);
+  }
 }
 
 function actualizarBadge(){
-  const notas=loadNotas();
-  const sinVer=notas.filter(n=>(n.dest===cu?.id||n.dest==='todos')&&n.from!==cu?.id&&!n.visto).length;
+  const sinVer=notasCache.filter(n=>
+    (n.dest===cu?.id||n.dest==='todos')&&n.from_user!==cu?.id&&
+    !(Array.isArray(n.visto_por)&&(n.visto_por.includes(cu.id)||n.visto_por.includes('resolved')))
+  ).length;
   const badge=document.getElementById('notas-badge');
   if(!badge) return;
   badge.style.display=sinVer>0?'flex':'none';
   badge.textContent=sinVer>9?'9+':sinVer;
 }
 
-// Revisar badge cada 30s
-setInterval(()=>{if(cu) actualizarBadge();},30000);
-<!-- ══ NOTAS FLOTANTES ══ -->
-<button id="notas-btn" onclick="toggleNotas()" title="Notas del equipo" style="display:none;position:fixed;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;border:none;cursor:pointer;font-size:20px;box-shadow:0 4px 16px rgba(200,16,46,.4);align-items:center;justify-content:center;transition:all .2s">
-  💬<span id="notas-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:var(--gold);color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center"></span>
+function renderNotas(){
+  const el=document.getElementById('notas-list');
+  if(!el) return;
+  const visibles=notasCache.filter(n=>
+    n.dest==='todos'||n.dest===cu?.id||n.from_user===cu?.id
+  );
+  if(visibles.length===0){
+    el.innerHTML=`<div style="text-align:center;color:var(--mut);font-size:12px;padding:30px 0">📌 Sin notas pendientes</div>`;
+    actualizarBadge(); return;
+  }
+  // Separar pendientes y resueltas
+  const pendientes=visibles.filter(n=>!(Array.isArray(n.visto_por)&&n.visto_por.includes('resolved')));
+  const resueltas=visibles.filter(n=>Array.isArray(n.visto_por)&&n.visto_por.includes('resolved'));
+  const renderCard=(n)=>{
+    const u=gu(n.from_user);
+    const esPropia=n.from_user===cu?.id;
+    const destLabel=n.dest==='todos'?'@todos':`@${gu(n.dest).name.split(' ')[0]}`;
+    const fecha=new Date(n.ts).toLocaleString('es-CO',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const resuelta=Array.isArray(n.visto_por)&&n.visto_por.includes('resolved');
+    return `<div style="background:var(--s2);border:1px solid ${resuelta?'var(--bd)':'var(--bd)'};border-left:3px solid ${resuelta?'var(--mut)':u.color};border-radius:10px;padding:10px 12px;opacity:${resuelta?'0.5':'1'}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="width:20px;height:20px;border-radius:50%;background:${u.color}20;color:${u.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${u.ini}</div>
+        <span style="font-size:11px;font-weight:600;color:${u.color}">${u.name.split(' ')[0]}</span>
+        <span style="font-size:10px;color:var(--acc);font-weight:600">${destLabel}</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--mut)">${fecha}</span>
+      </div>
+      <div style="font-size:12px;color:var(--txt);line-height:1.5;margin-bottom:${resuelta?'0':'8px'}">${n.texto}</div>
+      ${!resuelta?`<div style="display:flex;justify-content:flex-end">
+        <button onclick="resolverNota(${n.id})" style="font-size:10px;background:rgba(0,201,122,.12);color:var(--grn);border:1px solid rgba(0,201,122,.3);border-radius:6px;padding:3px 10px;cursor:pointer">✓ Listo</button>
+      </div>`:''}
+    </div>`;
+  };
+  el.innerHTML=(pendientes.length?pendientes.map(renderCard).join(''):'')
+    +(resueltas.length?`<div style="font-size:10px;color:var(--mut);margin-top:8px;margin-bottom:4px">Resueltas</div>`+resueltas.slice(0,3).map(renderCard).join(''):'');
+  actualizarBadge();
+}
+
+async function toggleNotas(){
+  notasAbiertas=!notasAbiertas;
+  document.getElementById('notas-panel').style.display=notasAbiertas?'flex':'none';
+  if(notasAbiertas){
+    await loadNotas();
+    renderNotas();
+    marcarNotasVistas();
+    setTimeout(()=>document.getElementById('nota-txt')?.focus(),100);
+  }
+}
+
+function startNotasRealtime(){
+  sb.channel('notas-equipo-rt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'notas_equipo'},async(payload)=>{
+      await loadNotas();
+      if(payload.eventType==='INSERT'){
+        const n=payload.new;
+        if(n.from_user!==cu?.id&&(n.dest==='todos'||n.dest===cu?.id)){
+          const u=gu(n.from_user);
+          const destLabel=n.dest==='todos'?'@todos':`@${cu.name.split(' ')[0]}`;
+          showToast(`📌 ${u.name.split(' ')[0]} ${destLabel}: "${n.texto.slice(0,45)}${n.texto.length>45?'…':''}"`,5000);
+          if(!notasAbiertas){
+            document.getElementById('notas-panel').style.display='flex';
+            notasAbiertas=true;
+          }
+        }
+      }
+      if(notasAbiertas) renderNotas();
+      else actualizarBadge();
+    })
+    .subscribe();
+}
+
+// Revisar badge cada 60s como fallback
+setInterval(async()=>{if(cu){await loadNotas();actualizarBadge();}},60000);
+</script>
+
+<!-- ══ PIZARRA DEL EQUIPO ══ -->
+<button id="notas-btn" onclick="toggleNotas()" title="Pizarra del equipo" style="display:none;position:fixed;bottom:24px;right:24px;z-index:1000;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;border:none;cursor:pointer;font-size:20px;box-shadow:0 4px 16px rgba(200,16,46,.4);align-items:center;justify-content:center;transition:all .2s">
+  📌<span id="notas-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:var(--gold);color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center"></span>
 </button>
 
-<div id="notas-panel" style="display:none;position:fixed;bottom:84px;right:24px;z-index:999;width:340px;max-height:480px;background:var(--s1);border:1px solid var(--bd);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-direction:column;overflow:hidden">
-  <div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
-    <div style="flex:1;font-family:'Syne',sans-serif;font-weight:700;font-size:14px">💬 Notas del equipo</div>
+<div id="notas-panel" style="display:none;position:fixed;bottom:84px;right:24px;z-index:999;width:400px;max-height:560px;background:var(--s1);border:1px solid var(--bd);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);flex-direction:column;overflow:hidden">
+  <!-- Header -->
+  <div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
+    <div style="flex:1;font-family:'Syne',sans-serif;font-weight:700;font-size:14px">📌 Pizarra del equipo</div>
     <button onclick="toggleNotas()" style="background:none;border:none;color:var(--mut);cursor:pointer;font-size:18px;padding:0 4px">✕</button>
   </div>
-  <div id="notas-list" style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px"></div>
-  <div style="padding:10px 12px;border-top:1px solid var(--bd)">
-    <div style="display:flex;gap:6px;margin-bottom:6px">
-      <select class="fsel" id="nota-dest" style="font-size:11px;padding:4px 8px;flex:1">
-        <option value="todos">📢 Para todos</option>
-        <option value="jose">→ Jose</option>
-        <option value="angie">→ Angie</option>
-        <option value="gabriela">→ Gabriela</option>
-        <option value="azhly">→ Azhly</option>
-        <option value="victor">→ Victor</option>
-      </select>
+  <!-- Tarjetas -->
+  <div id="notas-list" style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:160px"></div>
+  <!-- Componer -->
+  <div style="padding:10px 12px;border-top:1px solid var(--bd);background:var(--s2);border-radius:0 0 16px 16px">
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+      <span style="font-size:12px;color:var(--mut);white-space:nowrap">@ Para:</span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="dest-chips">
+        <button class="dest-chip on" data-id="todos" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--acc);color:#fff;cursor:pointer">Todos</button>
+        <button class="dest-chip" data-id="jose" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--s3);color:var(--txt);cursor:pointer">Jose</button>
+        <button class="dest-chip" data-id="angie" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--s3);color:var(--txt);cursor:pointer">Angie</button>
+        <button class="dest-chip" data-id="gabriela" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--s3);color:var(--txt);cursor:pointer">Gabriela</button>
+        <button class="dest-chip" data-id="azhly" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--s3);color:var(--txt);cursor:pointer">Azhly</button>
+        <button class="dest-chip" data-id="victor" onclick="selDest(this)" style="font-size:10px;padding:3px 9px;border-radius:12px;border:1px solid var(--bd);background:var(--s3);color:var(--txt);cursor:pointer">Victor</button>
+      </div>
     </div>
     <div style="display:flex;gap:6px">
-      <input class="fi" id="nota-txt" placeholder="Escribe una nota…" style="flex:1;font-size:12px;padding:7px 10px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarNota();}">
-      <button class="btnsave" onclick="enviarNota()" style="padding:7px 12px;font-size:12px">→</button>
+      <input class="fi" id="nota-txt" placeholder="Escribe una nota para el equipo…" style="flex:1;font-size:12px;padding:7px 10px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarNota();}">
+      <button class="btnsave" onclick="enviarNota()" style="padding:7px 14px;font-size:13px">📌</button>
     </div>
   </div>
 </div>
 </body>
+</html>
