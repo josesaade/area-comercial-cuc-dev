@@ -1237,7 +1237,7 @@ const ACCIONES=[
   {id:'sa_jose_firmo',       icon:'✍️', label:'Jose Saade firmó la carpeta',           color:'#00c97a', avanza:true,  pro:null},
   {id:'sa_centro_acepto',    icon:'🏛️', label:'Centro de Conciliación aceptó ✅',      color:'#00c97a', avanza:true,  pro:null},
   {id:'sa_centro_devolvio',  icon:'↩️', label:'Centro devolvió — corregir',            color:'#ff3355', avanza:false, pro:null},
-  {id:'sa_prueba_si',        icon:'✅', label:'Estudiante mandó el mensaje al usuario', color:'#00c97a', avanza:true,  pro:null},
+  {id:'sa_msg_enviado',      icon:'📨', label:'Mensaje enviado al estudiante — esperando prueba de envío al usuario', color:'#9b59ff', avanza:true, pro:null},
   {id:'sa_prueba_no',        icon:'📵', label:'Estudiante NO ha mandado prueba aún',    color:'#ff3355', avanza:false, pro:'sa_recordar_prueba'},
   {id:'sa_datos_completos',  icon:'📋', label:'Usuario entregó todos los datos',        color:'#00c97a', avanza:true,  pro:null},
   {id:'sa_segundo_aviso',    icon:'⚠️', label:'2do aviso — datos no han llegado',       color:'#ff3355', avanza:false, pro:'sa_segundo_aviso_datos'},
@@ -2409,6 +2409,8 @@ function generarMsgSAModal(){
 
   const intro=(tipo)=>`Buenos días, ${n}:\n\nEl radicado ${r} es una Solicitud de Audiencia de Conciliación por ${tipo}. Copia el siguiente mensaje y envíaselo al usuario ${u} HOY MISMO, sin modificarlo.\n\n━━━━━ MENSAJE PARA EL USUARIO ━━━━━\n\nBuenos días, señor(a) ${u}. Le escribo de parte del Consultorio Jurídico del Área Comercial de la Universidad de la Costa. Su caso radicado ${r} ha sido asignado para gestión. Para iniciar la Solicitud de Audiencia de Conciliación necesito que me envíe en un solo mensaje y en máximo 5 días la siguiente información:\n`;
 
+  const datosP=`
+\n📋 SUS DATOS PERSONALES:\nNombre completo · Número de documento · Celular · Correo electrónico (indispensable si la audiencia es virtual o mixta) · Dirección física completa con barrio y ciudad (indispensable si es presencial o mixta) · Estado civil · Fecha de nacimiento · Género · Ocupación · Estrato socioeconómico · Nivel de escolaridad · ¿Presenta alguna discapacidad? (sí o no; si sí, cuál) · ¿Es víctima de violencia basada en género? · ¿Es víctima del conflicto armado? · Grupo étnico (si aplica)\n\nSi actúa con apoderado: nombre completo, número de documento, tarjeta profesional, correo y adjuntar poder firmado dirigido al Centro de Conciliación de la CUC.`;
   const cierre=`\n🗓️ MODALIDAD DE AUDIENCIA: indíqueme si prefiere que la audiencia sea Presencial, Virtual o Mixta.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nIMPORTANTE: Después de enviarle ese mensaje al usuario, tienes máximo 2 días para enviarme captura de pantalla como evidencia. Sin esa evidencia no puedo registrar el avance del caso.\n\nSaludos,\nJOSE SAADE\nÁrea Comercial`;
 
   const msgs={
@@ -2417,10 +2419,9 @@ function generarMsgSAModal(){
 • Foto o escáner de su documento de identidad (cédula de ciudadanía)
 • Foto o escáner de la tarjeta de propiedad del vehículo (el convocante debe ser el propietario registrado en este documento)
 • Si la otra parte es una persona natural: foto o escáner de su documento de identidad (si lo tiene)
-• Si la otra parte es una aseguradora: certificado de existencia y representación legal (este documento lo puede solicitar directamente a la aseguradora o descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
+• Si la otra parte es una aseguradora: certificado de existencia y representación legal (puede solicitarlo a la aseguradora o descargarlo en la Cámara de Comercio — verifique que la razón social sea exacta: "Sura Seguros" y "Sura Vida" son entidades distintas)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE:
 • Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
@@ -2440,8 +2441,7 @@ Nombre completo · Número de documento · Celular · Correo electrónico · Dir
 • Contrato de arrendamiento (solo si fue firmado por escrito — si fue verbal no es necesario)
 • Foto o escáner del documento de identidad del arrendatario/arrendador (si lo tiene)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE:
 Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
@@ -2460,8 +2460,7 @@ Nombre completo · Número de documento · Teléfono · Correo electrónico · D
 • Documento que acredite la deuda: pagaré, letra de cambio, contrato, factura, recibo, o cualquier prueba escrita que tenga (si la deuda fue verbal y no tiene documento, indíquelo)
 • Foto o escáner del documento de identidad del deudor (si lo tiene)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE (el deudor):
 Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
@@ -2479,10 +2478,9 @@ Nombre completo · Número de documento · Teléfono · Correo electrónico · D
 • Factura, recibo o comprobante de compra del producto o servicio
 • Fotos, capturas o cualquier evidencia del defecto, incumplimiento o daño
 • Foto o escáner del documento de identidad del vendedor/proveedor (si es persona natural y lo tiene)
-• Si la otra parte es una empresa: certificado de existencia y representación legal (puede solicitarlo directamente a la empresa o descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
+• Si la otra parte es una empresa: certificado de existencia y representación legal (puede solicitarlo a la empresa o descargarlo en la Cámara de Comercio — verifique que la razón social sea exacta)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE (vendedor o empresa):
 • Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
@@ -2504,8 +2502,7 @@ Nombre completo · Número de documento · Celular · Correo electrónico · Dir
 • Fotos u evidencia del bien objeto de la compraventa (si aplica)
 • Foto o escáner del documento de identidad de la otra parte (si lo tiene)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE:
 Nombre completo · Número de documento · Teléfono · Correo electrónico · Dirección
@@ -2528,8 +2525,7 @@ Nombre completo · Número de documento · Teléfono · Correo electrónico · D
 • Foto o escáner del documento de identidad de la otra parte (si es persona natural y lo tiene)
 • Si la otra parte es una constructora o empresa: certificado de existencia y representación legal (puede descargarlo en la Cámara de Comercio — contiene el nombre completo, NIT y datos del representante legal)
 
-📋 SUS DATOS PERSONALES:
-Nombre completo · Número de documento · Celular · Correo electrónico · Dirección completa con barrio y ciudad · Estado civil · Fecha de nacimiento · Ocupación · Estrato socioeconómico
+${datosP}
 
 📋 DATOS DE LA OTRA PARTE (constructora o vendedor):
 • Si es persona natural: nombre completo, número de documento, teléfono, correo, dirección
@@ -3411,8 +3407,7 @@ function openAcc(id){
   const esSA = c.solucion==='Solicitud de conciliación';
 
   if(c.subestado==='Esperando notificación por Teams'&&esSA)
-    relevant=ACCIONES.filter(a=>['respondio','notificacion','reasignar'].includes(a.id))
-      .map(a=>a.id==='respondio'?{...a,label:'📢 Caso notificado al usuario — avanzar',icon:'📢'}:a);
+    relevant=ACCIONES.filter(a=>['sa_msg_enviado','notificacion','reasignar'].includes(a.id));
   else if(c.subestado==='Esperando notificación por Teams')
     relevant=ACCIONES.filter(a=>['respondio','notificacion','reasignar'].includes(a.id))
       .map(a=>a.id==='respondio'?{...a,label:'📢 Notificó el caso',icon:'📢'}:a);
@@ -3973,6 +3968,7 @@ async function saveAcc(){
       else if(selAcc==='sa_jose_firmo') c.subestado='Carpeta creada donde Cris';
       else if(selAcc==='sa_centro_acepto') c.subestado='Finalizado';
       // SA nuevas
+      else if(selAcc==='sa_msg_enviado') c.subestado='SA: esperando prueba de envío al usuario';
       else if(selAcc==='sa_prueba_si') c.subestado='SA: esperando datos del usuario (1er aviso)';
       else if(selAcc==='sa_prueba_no') c.subestado='SA: esperando prueba de envío al usuario'; // se queda + proforma
       else if(selAcc==='sa_datos_completos') c.subestado='En revision de area';
