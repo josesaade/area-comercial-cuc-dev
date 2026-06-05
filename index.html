@@ -1337,6 +1337,16 @@ Por favor hazlo inmediatamente o comunícate conmigo para indicarme el motivo de
 JOSE SAADE
 Área Comercial`,
 
+  sa_datos_recibidos:(r,n)=>
+`Buenos días, ${n}:
+
+El usuario del caso ${r} ya envió todos los datos e información requerida. Tienes 3 días para diligenciar completamente el formato de Solicitud de Audiencia de Conciliación en el generador del área (https://zippy-truffle-8ba810.netlify.app) y enviarme el documento listo para revisión.
+
+Si tienes dudas sobre cómo llenarlo, comunícate conmigo antes de que venza el plazo.
+
+JOSE SAADE
+Área Comercial`,
+
   sa_segundo_aviso_datos:(r,n,usuario)=>
 `Buenas, estimado(a) ${n}:
 
@@ -1933,8 +1943,7 @@ function getBandejaMsg(c){
   const s=c.subestado;
   if(s==='Esperando notificación por Teams') return PROFORMAS.notificacion(c.id,n);
   if(s==='SA: esperando prueba de envío al usuario') return PROFORMAS.sa_recordar_prueba(c.id,n);
-  if(s==='SA: esperando datos del usuario (1er aviso)') return PROFORMAS.sa_segundo_aviso_datos(c.id,n,c.usuario);
-  if(s==='SA: esperando datos del usuario (2do aviso)') return PROFORMAS.sa_segundo_aviso_datos(c.id,n,c.usuario);
+  if(s==='SA: esperando datos del usuario (1er aviso)'||s==='SA: esperando datos del usuario (2do aviso)') return PROFORMAS.sa_segundo_aviso_datos(c.id,n,c.usuario);
   if(s.includes('respuesta de estudiante (primer')) return PROFORMAS.espera_resp_1(c.id,n);
   if(s.includes('respuesta de estudiante (segundo')) return PROFORMAS.espera_resp_2(c.id,n);
   if(s.includes('documento del estudiante (primer')) return PROFORMAS.espera_doc_1(c.id,n);
@@ -3412,11 +3421,14 @@ function openAcc(id){
     relevant=ACCIONES.filter(a=>['respondio','notificacion','reasignar'].includes(a.id))
       .map(a=>a.id==='respondio'?{...a,label:'📢 Notificó el caso',icon:'📢'}:a);
   else if(c.subestado==='SA: esperando prueba de envío al usuario')
-    relevant=ACCIONES.filter(a=>['sa_prueba_si','sa_prueba_no','reasignar'].includes(a.id));
+    relevant=ACCIONES.filter(a=>['sa_prueba_si','sa_prueba_no','reasignar'].includes(a.id))
+      .map(a=>a.id==='sa_prueba_si'?{...a,label:'✅ Estudiante mandó la prueba de envío',icon:'✅'}:a);
   else if(c.subestado==='SA: esperando datos del usuario (1er aviso)')
-    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_segundo_aviso','sa_desestimiento'].includes(a.id));
+    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_segundo_aviso','reasignar'].includes(a.id))
+      .map(a=>a.id==='sa_datos_completos'?{...a,label:'📋 Usuario mandó los datos — indicar al estudiante que llene el formato (3 días)',icon:'📋'}:a);
   else if(c.subestado==='SA: esperando datos del usuario (2do aviso)')
-    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_desestimiento'].includes(a.id));
+    relevant=ACCIONES.filter(a=>['sa_datos_completos','sa_desestimiento','reasignar'].includes(a.id))
+      .map(a=>a.id==='sa_datos_completos'?{...a,label:'📋 Usuario mandó los datos — indicar al estudiante que llene el formato (3 días)',icon:'📋'}:a);
   else if(c.subestado.includes('respuesta de estudiante'))
     relevant=ACCIONES.filter(a=>['respondio','sin_resp_1','sin_resp_2','reasignar'].includes(a.id));
   else if(c.subestado.includes('documento del estudiante'))
@@ -3501,7 +3513,11 @@ function selAccion(id){
   const proFn=a.pro?PROFORMAS[a.pro]:null;
   const probox=document.getElementById('probox');
   const lbl=document.getElementById('pro-lbl');
-  if(proFn){
+  if(id==='sa_datos_completos'){
+    // Proforma especial: avisar al estudiante que llene el formato
+    document.getElementById('protxt').textContent=PROFORMAS.sa_datos_recibidos(c.id,n);
+    probox.classList.add('vis');lbl.style.display='block';
+  } else if(proFn){
     document.getElementById('protxt').textContent=proFn(c.id,n);
     probox.classList.add('vis');lbl.style.display='block';
   } else if(id!=='respondio'||c.subestado!=='Esperando notificación por Teams'){
