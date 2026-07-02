@@ -727,6 +727,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;min-
     </div>
     <div class="mftr">
       <button class="btnsec" onclick="openHistorialCaso(caseId)">📋 Ver historial</button>
+      <button class="btnsec" onclick="reversarAccion(caseId)" title="Reversar última acción">↩ Reversar</button>
       <button class="btnsec" onclick="abrirRecordatorio(caseId)" title="Programar recordatorio">⏰ Recordatorio</button>
       <button class="btnsec" onclick="cm('mod-accion')">Cancelar</button>
       <button class="btnsave" id="savebtn" disabled onclick="saveAcc()">Guardar acción</button>
@@ -1341,9 +1342,19 @@ JOSE SAADE
   sa_datos_recibidos:(r,n)=>
 `Buenos días, ${n}:
 
-El usuario del caso ${r} ya envió todos los datos e información requerida. Tienes 3 días para diligenciar completamente el formato de Solicitud de Audiencia de Conciliación en el generador del área (https://zippy-truffle-8ba810.netlify.app) y enviarme el documento listo para revisión.
+El usuario del caso ${r} ya envió la información requerida. Tienes 3 días para diligenciar y enviarme el formato de Solicitud de Audiencia de Conciliación listo para revisión.
 
-Si tienes dudas sobre cómo llenarlo, comunícate conmigo antes de que venza el plazo.
+Antes de enviármelo, verifica que:
+
+✅ Llenaste TODOS los campos — ninguno puede quedar en blanco o con "N/A" sin justificación
+✅ Los nombres del convocante y convocado coinciden exactamente con los documentos de identidad
+✅ La modalidad de audiencia está correctamente marcada (Presencial, Virtual o Mixta)
+✅ La relación de anexos al final del documento coincide con los documentos que realmente tienes — no pongas un anexo que no vas a adjuntar
+✅ El documento no tiene errores de ortografía ni espacios mal puestos
+✅ No modificaste el formato (márgenes, fuente, tamaño de letra) — debe quedar exactamente como lo genera la herramienta
+✅ Los anexos están en orden correcto y legibles (sin fotos borrosas o cortadas)
+
+Si tienes dudas sobre algún campo o no tienes un documento que se pide, comunícate conmigo ANTES de enviar — no adivines ni dejes campos incompletos.
 
 JOSE SAADE
 Área Comercial`,
@@ -1435,15 +1446,13 @@ Saludos,
 JOSE SAADE · Área Comercial`,
 
   aprobado_sa:(r,n)=>
-`Buenas tardes, estimado(a) ${n}.
+`Buenos días, ${n}:
 
-En relación con el caso identificado con el radicado ${r}, me complace informarte que este documento ha sido APROBADO.
+En relación con el caso identificado con el radicado ${r}, me complace informarte que este documento ha sido APROBADO. A continuación, se detallan los pasos para la creación de la carpeta de Solicitud de Audiencia de Conciliación:
 
-A continuación, se detallan los pasos para la creación de la carpeta de solicitud de conciliación:
+1. Crea la carpeta con CRIS VARELA con toda la información del usuario. Cita al usuario en tu turno para que firme la carpeta de manera física. Solicita copias físicas de los anexos.
 
-1. Envía un correo a Centro de Conciliación – CUC: centroconciliacion@cuc.edu.co con copia a Jose Saade (saadeg@cuc.edu.co) y al Área Comercial (areacomercial@cuc.edu.co), adjuntando: la solicitud en Word, documentos de identidad del solicitante y convocado, captura de la aprobación del área, y demás anexos.
-
-2. Crea la carpeta con CRIS VARELA con toda la información del usuario. Cita al usuario en tu turno para que firme la carpeta de manera física. Solicita copias físicas de los anexos.
+2. Envía un correo a Centro de Conciliación – CUC: centroconciliacion@cuc.edu.co con copia a Jose Saade (saadeg@cuc.edu.co) y al Área Comercial (areacomercial@cuc.edu.co), adjuntando: la solicitud en Word, documentos de identidad del solicitante y convocado, captura de la aprobación del área, y demás anexos.
 
 3. Una vez creada y firmada la carpeta (por ti y el usuario), recoge la firma del coordinador JOSE SAADE al final del documento. Entrega a CRIS VARELA para activar el trámite.
 
@@ -1452,7 +1461,8 @@ A continuación, se detallan los pasos para la creación de la carpeta de solici
 5. Informa al Área Comercial que todos los pasos han sido completados para dar por terminado el proceso.
 
 Saludos,
-Área Comercial · Consultorio Jurídico`,
+JOSE SAADE
+Área Comercial · Consultorio Jurídico CUC`,
 
   notificacion:(r,n)=>
 `Buenos días, estimado(a) ${n}.
@@ -1807,6 +1817,13 @@ function checkAlerts(){
   const sinLider=cu.id==='jose'?activos(cases).filter(c=>!c.lider||c.lider==='').length:0;
   const inactivos=mc.filter(c=>diasUA(c)>=15&&c.subestado!=='Finalizado').length;
 
+  // SA: sin prueba de envío +2 días
+  const saSinPrueba=allAct.filter(c=>
+    c.solucion==='Solicitud de conciliación'&&
+    c.subestado==='SA: esperando prueba de envío al usuario'&&
+    diasUA(c)>=2
+  ).length;
+
   // SA: casos con datos del usuario vencidos (+5 días en espera de datos)
   const saDatosVencidos=allAct.filter(c=>
     c.solucion==='Solicitud de conciliación'&&
@@ -1826,6 +1843,7 @@ function checkAlerts(){
   if(hoy>0) msg.push(`<span>${hoy} caso${hoy>1?'s':''}</span> ${hoy>1?'requieren':'requiere'} respuesta hoy (plazo de 3 días vencido)`);
   if(rev>0) msg.push(`<span>${rev} caso${rev>1?'s':''}</span> llevan +2 días en revisión del área — ¡revísalos!`);
   if(inactivos>0) msg.push(`<span style="cursor:pointer;text-decoration:underline;color:var(--pur)" onclick="sf('criticos');sw('casos')">🔕 ${inactivos} caso${inactivos>1?'s':''} sin actividad +15 días</span>`);
+  if(saSinPrueba>0) msg.push(`<span style="color:#9b59ff">📵 ${saSinPrueba} SA sin prueba de envío +2 días — el estudiante no mandó evidencia</span>`);
   if(saDatosVencidos>0) msg.push(`<span style="color:var(--gold)">📋 ${saDatosVencidos} SA esperando datos del usuario +5 días — notificar al líder</span>`);
   if(saCriticos.length>0) msg.push(`<span style="cursor:pointer;font-weight:700;color:var(--red)" onclick="window.open('https://zippy-truffle-8ba810.netlify.app','_blank')">🚨 ${saCriticos.length} SA con +15 días — RADICAR YA → Abrir generador</span>`);
   if(sinLider>0) msg.push(`<span style="cursor:pointer;text-decoration:underline" onclick="sf('sinlider');sw('casos')">👤 ${sinLider} caso${sinLider>1?'s':''} sin líder asignado</span>`);
@@ -2560,6 +2578,60 @@ function onSolucionChange(){
   const sol=document.getElementById('a-sol')?.value;
   const saBox=document.getElementById('a-sa-subtipo-box');
   if(saBox) saBox.style.display=sol==='Solicitud de conciliación'?'block':'none';
+}
+
+async function reversarAccion(id){
+  const c=cases.find(x=>x.id===id);
+  if(!c){showToast('❌ Caso no encontrado');return;}
+
+  // Buscar las últimas 2 entradas del historial para este caso
+  const hCaso=hist.filter(h=>h.caseId===id).slice(0,2);
+  if(hCaso.length<2){
+    showToast('⚠️ No hay acción anterior a la que reversar');
+    return;
+  }
+
+  const actual=hCaso[0];    // la más reciente
+  const anterior=hCaso[1];  // la que había antes
+
+  const subAnterior=anterior.subestado;
+  if(!subAnterior||subAnterior===actual.subestado){
+    showToast('⚠️ No se puede reversar — el subestado anterior es igual');
+    return;
+  }
+
+  if(!confirm(`↩ Reversar "${actual.accion}"\n\nEl caso volverá a: "${subAnterior}"\n\n¿Continuar?`)) return;
+
+  // Revertir en memoria
+  c.subestado=subAnterior;
+  c.fechaUltimaAccion=anterior.ts||c.fecha;
+
+  // Guardar en Supabase
+  await sb.from('casos').update({
+    subestado:subAnterior,
+    fecha_ultima_accion:anterior.ts||c.fecha
+  }).eq('id',id);
+
+  // Registrar la reversión en el historial
+  const entrada={
+    ts:new Date().toISOString(),
+    user:cu.name,
+    caseId:id,
+    estudiante:c.estudiante,
+    accion:`↩ Reversión: "${actual.accion}" → volvió a "${subAnterior}"`,
+    subestado:subAnterior
+  };
+  await sb.from('historial_casos').insert({
+    ts:entrada.ts, usuario:cu.name, case_id:id,
+    estudiante:c.estudiante,
+    accion:entrada.accion,
+    subestado:subAnterior
+  });
+  hist.unshift(entrada);
+
+  cm('mod-accion');
+  render();
+  showToast(`↩ Revertido a "${subAnterior}"`);
 }
 
 function generarMsgReasig(){
@@ -4490,7 +4562,7 @@ function exportCompromisosPDF(){
   const ST='<'+'style'+'>';const SE='</'+'style'+'>';
   const SCR='<'+'script'+'>';const SCRE='</'+'script'+'>';
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe Cartas</title>`
-    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:20px;font-weight:800;color:#9b59ff;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:24px}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:12px 14px;border-top:3px solid #9b59ff}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}.kpi-val{font-size:22px;font-weight:800;color:#9b59ff}.kpi-sub{font-size:10px;color:#888;margin-top:2px}h2{font-size:14px;font-weight:700;margin:20px 0 10px;color:#1a1a2e;border-bottom:2px solid #9b59ff;padding-bottom:6px}table{width:100%;border-collapse:collapse}th{background:#9b59ff;color:#fff;padding:7px 10px;text-align:left;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px}.footer{margin-top:28px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px}@media print{body{padding:16px}}`+SE
+    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:20px;font-weight:800;color:#9b59ff;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:24px}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:12px 14px;border-top:3px solid #9b59ff}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}.kpi-val{font-size:22px;font-weight:800;color:#9b59ff}.kpi-sub{font-size:10px;color:#888;margin-top:2px}h2{font-size:14px;font-weight:700;margin:20px 0 10px;color:#1a1a2e;border-bottom:2px solid #9b59ff;padding-bottom:6px}table{width:100%;border-collapse:collapse}th{background:#9b59ff;color:#fff;padding:7px 10px;text-align:left;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px}.footer{margin-top:28px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px}@media print{body{padding:16px}}@page{margin:1.5cm;size:A4}`+SE
     +`</head><body>`
     +`<h1>Cartas de Compromiso y Abandono</h1>`
     +`<div class="sub">Consultorio Jurídico CUC · Generado el ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · Por ${cu.name}</div>`
@@ -4545,7 +4617,7 @@ function exportPDF(){
   const ST='<'+'style'+'>';const SE='</'+'style'+'>';
   const SCR='<'+'script'+'>';const SCRE='</'+'script'+'>';
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe AC</title>`
-    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.charts-pair{display:flex;gap:16px;margin-bottom:24px}.charts-pair>div{flex:1}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}.chart-block{margin-bottom:24px}.chart-title{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}.chart-block img{width:100%;border-radius:8px;background:#f8f8fc;padding:8px}@media print{body{padding:18px}.nueva-pagina{page-break-before:always}.chart-block{page-break-inside:avoid}.charts-pair{page-break-inside:avoid}}`+SE
+    +ST+`*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a2e;background:#fff;padding:32px;font-size:13px}h1{font-size:22px;font-weight:800;color:#c8102e;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:28px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}.kpi{background:#f8f8fc;border:1px solid #e0e0f0;border-radius:10px;padding:14px 16px;border-top:3px solid #c8102e}.kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.kpi-val{font-size:24px;font-weight:800;color:#c8102e}.kpi-sub{font-size:10px;color:#888;margin-top:3px}h2{font-size:15px;font-weight:700;margin:24px 0 12px;color:#1a1a2e;border-bottom:2px solid #c8102e;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#c8102e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.04em}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:12px}tr:hover td{background:#f8f8fc}.charts-pair{display:flex;gap:16px;margin-bottom:24px}.charts-pair>div{flex:1}.footer{margin-top:36px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}.chart-block{margin-bottom:24px}.chart-title{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px}.chart-block img{width:100%;border-radius:8px;background:#f8f8fc;padding:8px}@media print{body{padding:18px}.nueva-pagina{page-break-before:always}.chart-block{page-break-inside:avoid}.charts-pair{page-break-inside:avoid}}@page{margin:1.5cm;size:A4}`+SE
     +`</head><body>`
     +`<h1>Área Comercial · Informe de Gestión</h1>`
     +`<div class="sub">Consultorio Jurídico CUC · Generado el ${new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})} · Por ${cu.name}</div>`
@@ -4783,8 +4855,7 @@ function renderConsultorio(){
 }
 
 function abrirGeneradorSA(){
-  showToast('🏛️ Abriendo generador de Solicitud de Audiencia…');
-  window.open('https://claude.ai','_blank');
+  window.open('https://zippy-truffle-8ba810.netlify.app/','_blank');
 }
 
 // ══════════════════════════════════════════
