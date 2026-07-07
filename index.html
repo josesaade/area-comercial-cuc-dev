@@ -3522,6 +3522,8 @@ function openAcc(id){
     relevant=ACCIONES.filter(a=>['sa_centro_acepto','sa_centro_devolvio'].includes(a.id));
   else if(c.subestado.includes('creación de carpeta'))
     relevant=ACCIONES.filter(a=>['respondio','cargue_emma'].includes(a.id));
+  else if(c.subestado.includes('Aprobado')&&esSA)
+    relevant=ACCIONES.filter(a=>['aprobado_sa'].includes(a.id));
   else if(c.subestado.includes('Aprobado'))
     relevant=ACCIONES.filter(a=>['docs_cargados','cargue_emma'].includes(a.id));
   else if(c.subestado==='Se reasignará')
@@ -4039,7 +4041,8 @@ async function saveAcc(){
         await crearChecklistSiNecesario(caseId);
         showToast('✅ Caso finalizado — revisa el Checklist de documentos');
       }
-      else if(selAcc==='aprobado_doc'||selAcc==='aprobado_sa') c.subestado='Aprobado por el area (a espera de carga de documentos en Emma)';
+      else if(selAcc==='aprobado_doc') c.subestado='Aprobado por el area (a espera de carga de documentos en Emma)';
+      else if(selAcc==='aprobado_sa') c.subestado='En creación de carpeta SA (falta firma del usuario)';
       else if(selAcc==='revision_done'){
         if(c.subestado==='En revision de area') c.subestado='Se espera documento del estudiante (primer aviso)';
         c.correcciones=(c.correcciones||0)+1;
